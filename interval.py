@@ -7,6 +7,15 @@ except ImportError as e:
 
 
 class Interval:
+    """Interval is a set of continuous and visibile points from any discrete row in the grid.
+
+    Attributes
+    ----------
+    _left -- leftmost point of the interval
+    _right -- rightmost point of the interval
+    _row -- Y axis denotating which row the interval is projected to
+
+    """
     DOUBLE_INEQUALITY_THRESHOLD = 1e-07
     EPSILON = 1e-07
 

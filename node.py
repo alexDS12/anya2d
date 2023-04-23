@@ -45,12 +45,12 @@ class Node:
         self._root = root
 
     @property
-    def interval(self) -> None:
+    def interval(self) -> Interval:
         """Get or set node interval"""
         return self._interval
 
     @interval.setter
-    def interval(self, interval) -> None:
+    def interval(self, interval: Interval) -> None:
         self._interval = interval
 
     @property
