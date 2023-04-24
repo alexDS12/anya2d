@@ -16,7 +16,7 @@ class Node:
     Attributes
     ----------
     _root -- three dimensional point in a space
-    _interval -- tuple of contiguous and visible points from a discrete row of the grid 
+    _interval -- tuple of continuous and visible points from a discrete row of the grid
     _parent -- parent node of current node
     _f -- calculated total cost for node
     _g -- distance between current and start nodes based on parent's distance and Euclidian distance between parent and current nodes
@@ -83,7 +83,7 @@ class Node:
     def __eq__(self, other_node: Node) -> bool:
         """Check if two nodes are identical, same interval and XY root"""
         if not isinstance(other_node, type(self)):
-            return False        
+            return False
         return self._interval == other_node.interval and self._root.equals(other_node.root)
     
     def __repr__(self) -> str:

@@ -7,7 +7,7 @@ except ImportError as e:
 
 
 class Interval:
-    """Interval is a set of continuous and visibile points from any discrete row in the grid.
+    """An interval is a set of continuous and visible points from any discrete row in the grid.
 
     Attributes
     ----------
@@ -19,7 +19,12 @@ class Interval:
     DOUBLE_INEQUALITY_THRESHOLD = 1e-07
     EPSILON = 1e-07
 
-    def __init__(self, left: float, right: float, row: int):
+    def __init__(
+            self,
+            left: float,
+            right: float,
+            row: int
+        ):
         self._left = left
         self._right = right
         self._row = row
