@@ -8,7 +8,7 @@ if TYPE_CHECKING: # hack to avoid circular import for type hint
 
 class Edge:
     """Representation of an edge.
-    An edge is an interval of continuous points and is limited by two discrete points that are represented by two vertices.
+    An edge is an open interval of continuous/intermediate points and is limited by two discrete points that are represented by two vertices.
 
     Attributes
     ----------

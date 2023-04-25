@@ -4,7 +4,7 @@ from interval import Interval
 from typing import Optional
 
 try:
-    from sympy import Point2D
+    from sympy import Point2D, N
 except ImportError as e:
     raise Exception('Unable to import SymPy, make sure you have it installed')
 
@@ -33,7 +33,7 @@ class Node:
         self._parent = parent
 
         self._f = 0
-        self._g = 0 if self._parent is None else self._parent.g + self._parent.root.distance(self._root)
+        self._g = 0 if self._parent is None else self._parent.g + N(self._parent.root.distance(self._root))
 
     @property
     def root(self) -> Point2D:
