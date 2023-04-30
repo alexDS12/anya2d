@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from enum import Enum, auto
 from edge import Edge
 from grid_position import GridPosition
 from typing import Optional, Set, Hashable
@@ -16,11 +17,20 @@ class Vertex:
 
     Attributes
     ----------
-    _id -- vertex identification
-    _position -- discrete XY position of the vertex
-    _grid_position -- vertex's discrete XY position in the grid
-    _incoming_edges -- edges that end at current vertex
-    _outgoing_edges -- edges that start at current vertex
+    _id : int
+        Vertex identification
+    _position : Point2D
+        Discrete XY position of the vertex
+    _grid_position : GridPosition
+        Vertex's discrete XY position in the grid
+    _incoming_edges : Set[Edge]
+        Edges that end at current vertex
+    _outgoing_edges : Set[Edge]
+        Edges that start at current vertex
+    cell_directions : Enum
+        All possible directions from a cell
+    vertex_directions : Enum
+        All possible vertex directions
 
     """
     def __init__(
@@ -34,6 +44,8 @@ class Vertex:
         self._grid_position = grid_position
         self._incoming_edges = set()
         self._outgoing_edges = set()
+        self.cell_directions = CellDirections()
+        self.vertex_directions = VertexDirections()
 
     @property
     def id(self) -> int:
@@ -113,3 +125,15 @@ class Vertex:
     def __repr__(self) -> str:
         """Debug representation of the vertex"""
         return f'Vertex(id: {self._id}, grid position: {self._grid_position})'
+
+class CellDirections(Enum):
+    CD_LEFTDOWN = auto()
+    CD_LEFTUP = auto()
+    CD_RIGHTDOWN = auto()
+    CD_RIGHTUP = auto()
+
+class VertexDirections(Enum):
+    VD_LEFT = auto()
+    VD_RIGHT = auto()
+    VD_DOWN = auto()
+    VD_UP = auto()
