@@ -27,17 +27,17 @@ class Heuristic:
     Anya only successfully terminates if the algorithm finds an interval that contains the target (or end) node.
     The target node must have an interval that only has its XY point, that means
     interval left == right == target.root.x; and interval row == target.root.y
-
-    Example
-    -------
-    t = Node(root=(3, 4), interval=(3, 3, 4))
-
+    
     Both current and target nodes must be on opposite sides of the interval or 
     both on the same row as the interval. If that condition is not met,
     target node is mirrored on the opposite side.
 
-    Example
+    Examples
     -------
+    t = Node(root=(3, 4), interval=(3, 3, 4))
+
+    Mirror target node:
+
     n = Node(root=(2, 0), interval=(2, 4, 2))
     t = Node(root=(4, 1), interval=(4, 4, 1)) <--- mirrored to t' based on `n` interval
 

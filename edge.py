@@ -12,10 +12,14 @@ class Edge:
 
     Attributes
     ----------
-    _id -- edge identification
-    _start -- discrete XY pair of coordinates that represents a vertex where an edge starts 
-    _end -- discrete XY pair of coordinates that represents a vertex where an edge ends
-    _weight -- total cost of the current edge
+    _id : int
+        Edge identification
+    _start : Vertex
+        Discrete XY pair of coordinates that represents a vertex where an edge starts 
+    _end : Vertex
+        Discrete XY pair of coordinates that represents a vertex where an edge ends
+    _weight : float
+        Total cost of the current edge
 
     """
     def __init__(
