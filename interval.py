@@ -11,9 +11,12 @@ class Interval:
 
     Attributes
     ----------
-    _left -- leftmost point of the interval
-    _right -- rightmost point of the interval
-    _row -- Y axis denotating which row the interval is projected to
+    _left : float
+        leftmost point of the interval
+    _right : float
+        rightmost point of the interval
+    _row : int
+        Y axis denotating which row the interval is projected to
 
     """
     DOUBLE_INEQUALITY_THRESHOLD = 1e-07
@@ -28,6 +31,8 @@ class Interval:
         self._left = left
         self._right = right
         self._row = row
+        self.discrete_left = False
+        self.discrete_right = False
 
     @property
     def left(self) -> float:
@@ -37,8 +42,8 @@ class Interval:
     def left(self, left: float) -> None:
         self._left = left
 
-        discrete_left = abs(int(left + self.EPSILON) - left) < self.EPSILON
-        if discrete_left:
+        self.discrete_left = abs(int(left + self.EPSILON) - left) < self.EPSILON
+        if self.discrete_left:
             self._left = int(self._left + self.EPSILON)
     
     @property
@@ -49,8 +54,8 @@ class Interval:
     def right(self, right: float) -> None:
         self._right = right
 
-        discrete_right = abs(int(right + self.EPSILON) - right) < self.EPSILON
-        if discrete_right:
+        self.discrete_right = abs(int(right + self.EPSILON) - right) < self.EPSILON
+        if self.discrete_right:
             self._right = int(self._right + self.EPSILON)
 
     @property
