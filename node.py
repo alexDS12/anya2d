@@ -15,11 +15,16 @@ class Node:
 
     Attributes
     ----------
-    _root -- three dimensional point in a space
-    _interval -- tuple of continuous and visible points from a discrete row of the grid
-    _parent -- parent node of current node
-    _f -- calculated total cost for node
-    _g -- distance between current and start nodes based on parent's distance and Euclidian distance between parent and current nodes
+    _root : Point2D
+        Three dimensional point in a space
+    _interval : Interval
+        Tuple of continuous and visible points from a discrete row of the grid
+    _parent : Optional[Node]
+        Parent node of current node
+    _f : float
+        Calculated total cost for node
+    _g: float
+        Distance between current and start nodes based on parent's distance and Euclidian distance between parent and current nodes
 
     """
     def __init__(
