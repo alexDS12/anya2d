@@ -27,24 +27,26 @@ class Node:
         Distance between current and start nodes based on parent's distance and Euclidian distance between parent and current nodes
 
     """
+
     def __init__(
-            self, 
-            root: Point2D,
-            interval: Interval,
-            parent: Optional[Node] = None
-        ):
+        self,
+        root: Point2D,
+        interval: Interval,
+        parent: Optional[Node] = None
+    ):
         self._root = root
         self._interval = interval
         self._parent = parent
 
         self._f = 0
-        self._g = 0 if self._parent is None else self._parent.g + N(self._parent.root.distance(self._root))
+        self._g = 0 if self._parent is None else self._parent.g + \
+            N(self._parent.root.distance(self._root))
 
     @property
     def root(self) -> Point2D:
         """Get or set XY node root"""
         return self._root
-    
+
     @root.setter
     def root(self, root: Point2D) -> None:
         self._root = root
@@ -90,7 +92,7 @@ class Node:
         if not isinstance(other_node, type(self)):
             return False
         return self._interval == other_node.interval and self._root.equals(other_node.root)
-    
+
     def __repr__(self) -> str:
         """Debug representation of the node"""
         return f'Node(root: {self._root}, interval: {self._interval}, f: {self._f}, g: {self._g}, parent: {self._parent})'

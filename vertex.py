@@ -33,12 +33,13 @@ class Vertex:
         All possible vertex directions
 
     """
+
     def __init__(
-            self,
-            id: int,
-            position: Point2D,
-            grid_position: GridPosition
-        ):
+        self,
+        id: int,
+        position: Point2D,
+        grid_position: GridPosition
+    ):
         self._id = id
         self._position = position
         self._grid_position = grid_position
@@ -56,22 +57,22 @@ class Vertex:
     def position(self) -> Point2D:
         """Get vertex XY position"""
         return self._position
-    
+
     @property
     def grid_position(self) -> GridPosition:
         """Get vertex position in the grid"""
         return self._grid_position
-    
+
     @property
     def incoming_edges(self) -> Set[Edge]:
         """Get edges coming to current vertex"""
         return self._incoming_edges
-    
+
     @property
     def outgoing_edges(self) -> Set[Edge]:
         """Get edges going from current vertex"""
         return self._outgoing_edges
-    
+
     @property
     def touching_edges(self) -> Set[Edge]:
         """Union between incoming and outgoing edges"""
@@ -93,7 +94,7 @@ class Vertex:
         """Get outgoing edge to given target vertex"""
         if not target:
             return None
-        
+
         for edge in self._outgoing_edges:
             if edge.end == target:
                 return edge
@@ -103,16 +104,16 @@ class Vertex:
         """Get incoming edge from a given start vertex"""
         if not start:
             return None
-        
+
         for edge in self._incoming_edges:
             if edge.start == start:
                 return edge
         return None
-    
+
     def get_outgoing_neighbors(self) -> Set[Vertex]:
         """Get all neighbors' vertices of current vertex"""
         return {edge.end for edge in self._outgoing_edges}
-    
+
     def __hash__(self) -> Hashable:
         return hash((self._id, self._position))
 
@@ -121,16 +122,18 @@ class Vertex:
         if not isinstance(other_vertex, type(self)):
             return False
         return self._id == other_vertex.id
-    
+
     def __repr__(self) -> str:
         """Debug representation of the vertex"""
         return f'Vertex(id: {self._id}, grid position: {self._grid_position})'
+
 
 class CellDirections(Enum):
     CD_LEFTDOWN = auto()
     CD_LEFTUP = auto()
     CD_RIGHTDOWN = auto()
     CD_RIGHTUP = auto()
+
 
 class VertexDirections(Enum):
     VD_LEFT = auto()
