@@ -103,6 +103,10 @@ class BitpackedGrid:
         self._smallest_step = min(1 / float(self._map_width), 1 / float(self._map_height))
         self._smallest_step_div2 = self._smallest_step / 2.0
 
+    @property
+    def smallest_step_div2(self) -> float:
+        return self._smallest_step_div2
+
     def get_point_is_visible(self, x: int, y: int) -> bool:
         """Return True/False indicating the point (x, y)
         has at least one adjacent unblocked cell
