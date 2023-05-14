@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-from typing import TypeVar, Generic
-
+from typing import TypeVar
 
 T = TypeVar('T')
 
 
-class FibonacciHeapNode(Generic[T]):
+class FibonacciHeapNode:
     """Implements a node of the Fibonacci heap. It holds the information necessary
     for maintaining the structure of the heap. It also holds the reference to the
     key value (which is used to determine the heap structure).
-    This is a merely copy of Daniel Harabor's FibonacciHeapNode
+    Translated Python version of Nathan Fiedler's FibonacciHeapNode
 
     Attributes
     ----------
@@ -52,36 +51,24 @@ class FibonacciHeapNode(Generic[T]):
         self.degree = 0
         self.mark = False
 
-    @property
-    def key(self) -> float:
-        """Get key for this node"""
-        return self.key
-
-    @property
-    def secondary_key(self) -> float:
-        """Get secondary key for this node"""
-        return self.secondary_key
-
-    @property
-    def data(self) -> T:
-        """Get data for this node"""
-        return self.data
-
-    def __lt__(self, other: FibonacciHeapNode) -> bool:
-        """Return True if this node has a lower priority than other node"""
-        tmp_key = self.key * self.BIG_ONE + 0.5
-        tmp_other = other.key * self.BIG_ONE + 0.5
+    @staticmethod
+    def less_than(pk_a: float, sk_a: float, pk_b: float, sk_b: float) -> bool:
+        tmp_key = (pk_a * FibonacciHeapNode.BIG_ONE + 0.5)
+        tmp_other = (pk_b * FibonacciHeapNode.BIG_ONE + 0.5)
         if tmp_key < tmp_other:
             return True
 
+        # tie-break in favour of nodes with higher
+        # secondaryKey values
         if tmp_key == tmp_other:
-            tmp_key = self.secondary_key * self.BIG_ONE + 0.5
-            tmp_other = other.secondary_key * self.BIG_ONE + 0.5
-
+            tmp_key = (sk_a * FibonacciHeapNode.BIG_ONE + 0.5)
+            tmp_other = (sk_b * FibonacciHeapNode.BIG_ONE + 0.5)
             if tmp_key > tmp_other:
                 return True
         return False
 
+    def __lt__(self, other: FibonacciHeapNode) -> bool:
+        return FibonacciHeapNode.less_than(self.key, self.secondary_key, other.key, other.secondary_key)
+
     def __repr__(self) -> str:
-        """Representation of the node object"""
         return str(self.key)

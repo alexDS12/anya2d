@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum, auto
 from edge import Edge
 from grid_position import GridPosition
-from typing import Optional, Set, Hashable
+from typing import Optional, Set
 
 try:
     from sympy import Point2D
@@ -17,15 +17,15 @@ class Vertex:
 
     Attributes
     ----------
-    _id : int
+    id : int
         Vertex identification
-    _position : Point2D
+    position : Point2D
         Discrete XY position of the vertex
-    _grid_position : GridPosition
+    grid_position : GridPosition
         Vertex's discrete XY position in the grid
-    _incoming_edges : Set[Edge]
+    incoming_edges : Set[Edge]
         Edges that end at current vertex
-    _outgoing_edges : Set[Edge]
+    outgoing_edges : Set[Edge]
         Edges that start at current vertex
     cell_directions : Enum
         All possible directions from a cell
@@ -34,98 +34,61 @@ class Vertex:
 
     """
 
-    def __init__(
-        self,
-        id: int,
-        position: Point2D,
-        grid_position: GridPosition
-    ):
-        self._id = id
-        self._position = position
-        self._grid_position = grid_position
-        self._incoming_edges = set()
-        self._outgoing_edges = set()
-        self.cell_directions = CellDirections()
-        self.vertex_directions = VertexDirections()
-
-    @property
-    def id(self) -> int:
-        """Get vertex identification"""
-        return self._id
-
-    @property
-    def position(self) -> Point2D:
-        """Get vertex XY position"""
-        return self._position
-
-    @property
-    def grid_position(self) -> GridPosition:
-        """Get vertex position in the grid"""
-        return self._grid_position
-
-    @property
-    def incoming_edges(self) -> Set[Edge]:
-        """Get edges coming to current vertex"""
-        return self._incoming_edges
-
-    @property
-    def outgoing_edges(self) -> Set[Edge]:
-        """Get edges going from current vertex"""
-        return self._outgoing_edges
+    def __init__(self, id: int, position: Point2D, grid_position: GridPosition):
+        self.id = id
+        self.position = position
+        self.grid_position = grid_position
+        self.incoming_edges = set()
+        self.outgoing_edges = set()
 
     @property
     def touching_edges(self) -> Set[Edge]:
         """Union between incoming and outgoing edges"""
-        return self._incoming_edges | self._outgoing_edges
+        return self.incoming_edges | self.outgoing_edges
+    
+    def add_outgoing_edge(self, e: Edge) -> None:
+        self.outgoing_edges.add(e)
 
-    def add_incoming_edge(self, edge: Edge) -> None:
-        self._incoming_edges.add(edge)
+    def add_incoming_edge(self, e: Edge) -> None:
+        self.incoming_edges.add(e)
 
-    def remove_incoming_edge(self, edge: Edge) -> None:
-        self._incoming_edges.discard(edge)
+    def remove_incoming_edge(self, e: Edge) -> None:
+        self.incoming_edges.discard(e)
 
-    def add_outgoing_edge(self, edge: Edge) -> None:
-        self._outgoing_edges.add(edge)
+    def remove_outgoing_edge(self, e: Edge) -> None:
+        self.outgoing_edges.discard(e)
 
-    def remove_outgoing_edge(self, edge: Edge) -> None:
-        self._outgoing_edges.discard(edge)
-
-    def get_outgoing_to(self, target: Vertex) -> Optional[Edge]:
+    def get_outgoing_neighbors(self) -> Set[Vertex]:
+        """Get all neighbors' vertices of current vertex"""
+        return {e.end for e in self.outgoing_edges}
+    
+    def get_outgoing_to(self, target: Optional[Vertex]) -> Optional[Edge]:
         """Get outgoing edge to given target vertex"""
-        if not target:
+        if target is None:
             return None
-
-        for edge in self._outgoing_edges:
-            if edge.end == target:
-                return edge
+        
+        for e in self.outgoing_edges:
+            if e.end == target:
+                return e
         return None
 
     def get_incoming_from(self, start: Vertex) -> Optional[Edge]:
         """Get incoming edge from a given start vertex"""
-        if not start:
-            return None
-
-        for edge in self._incoming_edges:
-            if edge.start == start:
-                return edge
+        for e in self.incoming_edges:
+            if e.start == start:
+                return e
         return None
 
-    def get_outgoing_neighbors(self) -> Set[Vertex]:
-        """Get all neighbors' vertices of current vertex"""
-        return {edge.end for edge in self._outgoing_edges}
-
-    def __hash__(self) -> Hashable:
-        return hash((self._id, self._position))
-
-    def __eq__(self, other_vertex: Vertex) -> bool:
-        """Check if two vertices have same id"""
-        if not isinstance(other_vertex, type(self)):
-            return False
-        return self._id == other_vertex.id
+    def __eq__(self, v: Vertex) -> bool:
+       """Check if two vertices have same id"""
+       return self.id == v.id
+    
+    def __hash__(self) -> int:
+        return hash((self.id, self.position, self.grid_position))
 
     def __repr__(self) -> str:
         """Debug representation of the vertex"""
-        return f'Vertex(id: {self._id}, grid position: {self._grid_position})'
+        return f'Vertex(id: {self.id}, grid position: {self.grid_position})'
 
 
 class CellDirections(Enum):

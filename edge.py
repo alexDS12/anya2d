@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Set, Hashable, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # hack to avoid circular import for type hint
     from vertex import Vertex
@@ -13,13 +13,13 @@ class Edge:
 
     Attributes
     ----------
-    _id : int
+    id : int
         Edge identification
-    _start : Vertex
+    start : Vertex
         Discrete XY pair of coordinates that represents a vertex where an edge starts 
-    _end : Vertex
+    end : Vertex
         Discrete XY pair of coordinates that represents a vertex where an edge ends
-    _weight : float
+    weight : float
         Total cost of the current edge
 
     """
@@ -31,38 +31,15 @@ class Edge:
         end: Vertex,
         weight: float
     ):
-        self._id = id
-        self._start = start
-        self._end = end
-        self._weight = weight
+        self.id = id
+        self.start = start
+        self.end = end
+        self.weight = weight
 
-    @property
-    def id(self) -> int:
-        """Get edge identification"""
-        return self._id
-
-    @property
-    def start(self) -> Vertex:
-        """Get start vertex of current edge"""
-        return self._start
-
-    @property
-    def end(self) -> Vertex:
-        """Get end vertex of current edge"""
-        return self._end
-
-    @property
-    def weight(self) -> float:
-        """Get edge's weight/cost"""
-        return self._weight
-
-    def __hash__(self) -> Hashable:
-        return hash((self._id, self._start, self._end, self._weight))
-
-    def __eq__(self, other_edge: Edge) -> bool:
+    def __eq__(self, e: Edge) -> bool:
         """Check if two edges have same id"""
-        return self._id == other_edge.id
-
+        return self.id == e.id
+    
     def __repr__(self) -> str:
         """Debug representation of the edge"""
-        return f'Edge(\n\tid: {self._id}, \n\tvertex start: {self._start}, \n\tvertex end: {self._end}, \n\tweight: {self._weight}\n)'
+        return f'Edge(\n\tid: {self.id}, \n\tvertex start: {self.start}, \n\tvertex end: {self.end}, \n\tweight: {self.weight}\n)'

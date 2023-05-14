@@ -21,23 +21,25 @@ class Interval:
         rightmost point of the interval
     _row : int
         Y axis denotating which row the interval is projected to
-
+    discrete_left : bool
+        Indicates whether or not left point is discrete
+    discrete_right : bool
+        Indicates whether or not right point is discrete
+    
     """
 
-    def __init__(
-        self,
-        left: float,
-        right: float,
-        row: int
-    ):
-        self._left = left
-        self._right = right
-        self._row = row
-        self.discrete_left = False
-        self.discrete_right = False
+    def __init__(self, left: float, right: float, row: int):
+        self.init(left, right, row)
+
+    def init(self, left: float, right: float, row: int) -> None:
+        """Use property setters to assign _left, _right and _row"""
+        self.left = left
+        self.right = right
+        self.row = row
 
     @property
     def left(self) -> float:
+        """Get or set left point of interval and whether it's discrete"""
         return self._left
 
     @left.setter
@@ -50,6 +52,7 @@ class Interval:
 
     @property
     def right(self) -> float:
+        """Get or set right point of interval and whether it's discrete"""
         return self._right
 
     @right.setter
@@ -62,6 +65,7 @@ class Interval:
 
     @property
     def row(self) -> int:
+        """Get or set row of interval"""
         return self._row
 
     @row.setter
@@ -69,31 +73,34 @@ class Interval:
         self._row = row
 
     def range_size(self) -> float:
+        """Get interval size"""
         return self._right - self._left
 
-    def covers(self, other_interval: Interval) -> bool:
-        """Check if intervals are identical or if interval covers other interval"""
-        if self == other_interval:
+    def covers(self, i: Interval) -> bool:
+        """Check if intervals are identical or if this interval covers interval `i`"""
+        if abs(i.left - self._left) < DOUBLE_INEQUALITY_THRESHOLD and \
+           abs(i.right - self._right) < DOUBLE_INEQUALITY_THRESHOLD and \
+           i.row == self._row:
             return True
+        return self._left <= i.left and self._right >= i.right and self._row == i.row
 
-        return self._left <= other_interval.left and \
-            self._right >= other_interval.right and \
-            self._row == other_interval.row
+    def contains(self, p: Point2D) -> bool:
+        """Check if a point is in the interval. row is Y whereas left and right control X"""
+        return (int(p.y) == self._row and
+                (p.x + EPSILON) >= self._left and
+                p.x <= (self._right + EPSILON))
 
-    def contains(self, point_position: Point2D) -> bool:
-        """Check if a point is in the interval. row_num is Y whereas left and right control X"""
-        return self._row == int(point_position.y) and \
-            self._left <= point_position.x + EPSILON and \
-            self._right + EPSILON >= point_position.x
-
-    def __eq__(self, other_interval: Interval) -> bool:
+    def __eq__(self, i: Interval) -> bool:
         """Check if all attributes from two intervals are the same"""
-        if not isinstance(other_interval, type(self)):
+        if not isinstance(i, type(self)):
             return False
 
-        return abs(other_interval.left - self._left) < DOUBLE_INEQUALITY_THRESHOLD and \
-            abs(other_interval.right - self._right) < DOUBLE_INEQUALITY_THRESHOLD and \
-            self._row == other_interval.row
+        return abs(i.left - self._left) < DOUBLE_INEQUALITY_THRESHOLD and \
+               abs(i.right - self._right) < DOUBLE_INEQUALITY_THRESHOLD and \
+               i.row == self._row
+
+    def __hash__(self) -> int:
+        return hash((self._left, self._right, self._row))
 
     def __repr__(self) -> str:
         """Debug representation of the interval"""

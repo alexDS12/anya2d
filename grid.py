@@ -1,9 +1,13 @@
+from __future__ import annotations
+
 from vertex import VertexDirections
 from constants import PADDING_, BITS_PER_WORD, LOG2_BITS_PER_WORD, INDEX_MASK
 from io import StringIO
+from fileinput import input
+from typing import List
 
 try:
-    from numpy import zeros, ndarray, int64
+    from numpy import zeros, array, ndarray, int64
 except ImportError as e:
     raise Exception('Unable to import NumPy, make sure you have it installed')
 
@@ -15,8 +19,6 @@ class BitpackedGrid:
 
     Attributes
     ----------
-    map_file : Optional[str]
-        file path to load the environment map
     _map_height_original : int
         Original dimension of the grid
     _map_width_original : int
@@ -37,54 +39,24 @@ class BitpackedGrid:
         Array indicating which cell grids are corners and which are not
     _double_corner : ndarray[int]
         Array indicating which cell grids are double corners and which are not
-    _smallest_step : float
+    smallest_step : float
         Smallest distance between two adjacent points
-    _smallest_step_div2 : float
+    smallest_step_div2 : float
         Ditto; for convenience
 
     """
 
     def __init__(self, **kwargs):
-        self.map_file = kwargs.get('map_file')
+        map_file = kwargs.get('map_file')
         width = kwargs.get('width', 0)
         height = kwargs.get('height', 0)
 
-        if self.map_file:
-            self.load()
-
+        if map_file:
+            self.load_map(map_file)
         elif width > 0 and height > 0:
             self.init(width, height)
-
         else:
-            raise Exception('Either map file must be provided or width and height must be greater than 0')
-
-    def load(self) -> None:
-        """Load map file and initialize traversable and non-traversable cells"""
-        try:
-            with open(self.map_file, 'r') as file:
-                map_type, *dims, map_token = [next(file).strip() for _ in range(4)]
-
-                if map_token != 'map':
-                    raise Exception(f'Could not load map; unrecognized format: {map_token}')
-
-                if map_type == 'octile':
-                    raise Exception(f'Could not load map; only octile types are supported; got: {map_type}')
-
-                dims = dict([dim.split() for dim in dims])
-                try:
-                    dims['width'] = int(dims['width'])
-                    dims['height'] = int(dims['height'])
-                except Exception as e:
-                    raise Exception(f'Could not load map; invalid height/width: {e}')
-
-                self.init(**dims)
-                for y in range(dims['height']):
-                    map_line = next(file)
-
-                    for x in range(dims['width']):
-                        self.set_cell_is_traversable(x, y, map_line[x] == '.')
-        except Exception as e:
-            raise Exception(f'Unexpected exception while loading map file: {e}')
+            raise Exception('Either map or graph file must be provided or width and height must be greater than 0')
 
     def init(self, width: int, height: int) -> None:
         """Initialize map attributes based on grid dimensions"""
@@ -100,12 +72,23 @@ class BitpackedGrid:
         self._corner = zeros(self._map_size, dtype=int64)
         self._double_corner = zeros(self._map_size, dtype=int64)
 
-        self._smallest_step = min(1 / float(self._map_width), 1 / float(self._map_height))
-        self._smallest_step_div2 = self._smallest_step / 2.0
+        self.smallest_step = min(1 / float(self._map_width), 1 / float(self._map_height))
+        self.smallest_step_div2 = self.smallest_step / 2.0
 
     @property
-    def smallest_step_div2(self) -> float:
-        return self._smallest_step_div2
+    def map_width(self) -> int:
+        """Get padded dimensions of the grid"""
+        return self._map_width
+    
+    @property
+    def map_height(self) -> int:
+        """Get padded dimensions of the grid"""
+        return self._map_height
+    
+    @property
+    def num_cells(self) -> int:
+        """Get number of cells of the grid"""
+        return self._map_height * self._map_width
 
     def get_point_is_visible(self, x: int, y: int) -> bool:
         """Return True/False indicating the point (x, y)
@@ -142,9 +125,9 @@ class BitpackedGrid:
         """Set point as double corner (True) or not (False)"""
         self.set_bit_value(x, y, value, self._double_corner)
 
-    def get_point_is_discrete(self, x: float) -> bool:
+    def get_point_is_discrete(self, x: float, y: int) -> bool:
         """Return True indicating a given point is discrete or False otherwise"""
-        return abs(int(x + self._smallest_step_div2) - x) < self._smallest_step
+        return abs(int(x + self.smallest_step_div2) - x) < self.smallest_step
 
     def set_cell_is_traversable(self, cx: int, cy: int, value: bool) -> None:
         """Set cell as unblocked or blocked along with,
@@ -156,7 +139,7 @@ class BitpackedGrid:
         self.update_point(cx, cy)
         self.update_point(cx + 1, cy)
         self.update_point(cx, cy + 1)
-        self.update_point(cx + 1, cy + 1)
+        self.update_point(cx + 1, cy + 1)		
 
     def update_point(self, px: int, py: int) -> None:
         """Set point as visible, corner or double corner
@@ -195,7 +178,7 @@ class BitpackedGrid:
         """Set cell value based on corresponding map word index"""
         map_id = self.get_map_id(x, y)
         word_index = map_id >> LOG2_BITS_PER_WORD
-        mask = 1 << (map_id & INDEX_MASK)
+        mask = 1 << ((map_id & INDEX_MASK))
         tmp = elts[word_index]
         elts[word_index] = (tmp | mask) if value else (tmp & ~mask)
 
@@ -207,7 +190,7 @@ class BitpackedGrid:
     ) -> bool:
         """Get cell value based on corresponding map word index"""
         map_id = self.get_map_id(x, y)
-        word_index = map_id >> LOG2_BITS_PER_WORD
+        word_index = map_id >> LOG2_BITS_PER_WORD		
         mask = 1 << (map_id & INDEX_MASK)
         return (elts[word_index] & mask) != 0
 
@@ -215,19 +198,16 @@ class BitpackedGrid:
         """Get cell index on padded dimensions map"""
         return (y + PADDING_) * self._map_width + (x + PADDING_)
 
-    def can_step_from_point(
-        self,
-        from_x: float,
-        from_y: float,
-        d: VertexDirections
-    ) -> bool:
-        """Return True if it's possible to perform a movement from a point `p` (x, y)
-        in a given direction `d`
+    def can_step_from_point(self, from_x: float, from_y: float, d: VertexDirections) -> bool:
+        """Return True if it's possible to perform a movement from point `p` (x, y)
+        in a given direction `d`.
+        If `p` is discrete, it's necessary that at least one adjacent cell
+        is not blocked.
+        Otherwise, if `p` is not discrete, depends if cell (x, y) is blocked or not
         """
-        discrete_x = ((from_x + self._smallest_step_div2) - int(from_x)) < self._smallest_step
+        discrete_x = ((from_x + self.smallest_step_div2) - int(from_x)) < self.smallest_step
 
         ret_val = False
-
         match d.name:
             case 'VD_LEFT':
                 cx = int(from_x - 1 if discrete_x else from_x)
@@ -245,13 +225,13 @@ class BitpackedGrid:
                 cx = int(from_x)
                 cy = int(from_y - 1)
                 ret_val = self.get_cell_is_traversable(cx, cy) | \
-                    (discrete_x and self.get_cell_is_traversable(cx - 1, cy))
+                          (discrete_x and self.get_cell_is_traversable(cx - 1, cy))
 
             case 'VD_DOWN':
                 cx = int(from_x)
                 cy = int(from_y)
                 ret_val = self.get_cell_is_traversable(cx, cy) | \
-                    (discrete_x and self.get_cell_is_traversable(cx - 1, cy))
+                          (discrete_x and self.get_cell_is_traversable(cx - 1, cy))
         return ret_val
 
     def scan_cells_right(self, x: int, y: int) -> int:
@@ -265,8 +245,8 @@ class BitpackedGrid:
 
         # ignore obstacles in bit positions < (i.e. to the left of) the starting cell
         # (NB: big endian order means the leftmost cell is in the lowest bit)
-        obstacles: int = ~self._map_cells[t_index]
-        start_bit_index: int = tile_id & INDEX_MASK
+        obstacles = ~self._map_cells[t_index]
+        start_bit_index = tile_id & INDEX_MASK
         mask = ~((1 << start_bit_index) - 1)
         obstacles &= mask
 
@@ -274,8 +254,9 @@ class BitpackedGrid:
         start_index = t_index
         while True:
             if obstacles != 0:
-                stop_pos = get_number_trailing_zeros(obstacles)
+                stop_pos = BitpackedGrid.get_number_trailing_zeros(obstacles)
                 break
+
             t_index += 1
             obstacles = ~self._map_cells[t_index]
 
@@ -288,17 +269,18 @@ class BitpackedGrid:
         and heading in the negative x direction.
         Return `x` of the first obstacle reached by traveling
         left from `p`
-        """
+        """         	
         tile_id = self.get_map_id(x, y)
         t_index = tile_id >> LOG2_BITS_PER_WORD
 
-        obstacles: int = self._map_cells[t_index]
+        # scan adjacent cells from the current row and the row above
+        obstacles = self._map_cells[t_index]
         obstacles = ~obstacles
 
         # ignore cells in bit positions > (i.e. to the right of) the starting cell
         # (NB: big endian order means the rightmost cell is in the highest bit)
-        start_bit_index: int = tile_id & INDEX_MASK
-        opposite_index: int = (BITS_PER_WORD - (start_bit_index + 1))
+        start_bit_index = tile_id & INDEX_MASK
+        opposite_index = BITS_PER_WORD - (start_bit_index + 1)
         mask = 1 << start_bit_index
         mask = (mask | (mask - 1))
         obstacles &= mask
@@ -307,8 +289,9 @@ class BitpackedGrid:
         start_index = t_index
         while True:
             if obstacles != 0:
-                stop_pos = get_number_leading_zeros(obstacles)
+                stop_pos = BitpackedGrid.get_number_leading_zeros(obstacles)
                 break
+
             t_index -= 1
             obstacles = ~self._map_cells[t_index]
 
@@ -321,7 +304,7 @@ class BitpackedGrid:
         Return next discrete point that is a corner or which
         is the last traversable point before an obstacle
         """
-        left_of_x = int(x + self._smallest_step_div2)
+        left_of_x = int(x + self.smallest_step_div2)
         tile_id = self.get_map_id(left_of_x, row)
         t_index = tile_id >> LOG2_BITS_PER_WORD
         ta_index = t_index - self._map_width_in_words
@@ -330,7 +313,7 @@ class BitpackedGrid:
         cells = self._map_cells[t_index]
         cells_above = self._map_cells[ta_index]
 
-        obstacles: int = ~cells & ~cells_above
+        obstacles = ~cells & ~cells_above
         corners = self._corner[t_index]
 
         # ignore corners in bit positions <= (i.e. to the left of) the starting cell
@@ -338,11 +321,11 @@ class BitpackedGrid:
         start_bit_index = tile_id & INDEX_MASK
         mask = 1 << start_bit_index
         corners &= ~(mask | (mask - 1))
-
-        # ignore obstacles in bit positions < (i.e. strictly left of) the starting cell
-        # Because we scan cells (and not corners) we cannot ignore the current location.
-        # To do so might result in intervals that pass through obstacles
-        # (e.g. current location is a double corner)
+        
+        #ignore obstacles in bit positions < (i.e. strictly left of) the starting cell    	
+        #Because we scan cells (and not corners) we cannot ignore the current location. 
+        #To do so might result in intervals that pass through obstacles 
+        #(e.g. current location is a double corner)
         obstacles &= ~(mask - 1)
 
         stop_pos = 0
@@ -350,12 +333,13 @@ class BitpackedGrid:
         while True:
             value = corners | obstacles
             if value != 0:
-                # Each point (x, y) is associated with the top-left
+                # Each point (x, y) is associated with the top-left 
                 # corner of tile (x, y). When traveling right (cf. left)
-                # we need to stop exactly at the position of the first
-                # (corner or obstacle) bit.
-                stop_pos = get_number_trailing_zeros(value)
+                # we need to stop exactly at the position of the first 
+                # (corner or obstacle) bit. 
+                stop_pos = BitpackedGrid.get_number_trailing_zeros(value)
                 break
+
             t_index += 1
             ta_index += 1
             corners = self._corner[t_index]
@@ -370,10 +354,10 @@ class BitpackedGrid:
         Return next discrete point that is a corner or which
         is the last traversable point before an obstacle
         """
-        # early return if the next discrete point
+        # early return if the next discrete point 
         # left of x is a corner
         left_of_x = int(x)
-        if (x - left_of_x) >= self._smallest_step and self.get_point_is_corner(left_of_x, row):
+        if (x - left_of_x) >= self.smallest_step and self.get_point_is_corner(left_of_x, row):
             return left_of_x
 
         tile_id = self.get_map_id(left_of_x, row)
@@ -384,7 +368,7 @@ class BitpackedGrid:
         cells = self._map_cells[t_index]
         cells_above = self._map_cells[ta_index]
 
-        obstacles: int = ~cells & ~cells_above
+        obstacles = ~cells & ~cells_above
         corners = self._corner[t_index]
 
         # ignore cells in bit positions >= (i.e. to the right of) the starting cell
@@ -402,15 +386,19 @@ class BitpackedGrid:
         while True:
             value = corners | obstacles
             if value != 0:
-                # Each point (x, y) is associated with the top-left
+                # Each point (x, y) is associated with the top-left 
                 # corner of tile (x, y). When counting zeroes to figure
-                # out how far we can travel we end up stopping one
+                # out how far we can travel we end up stopping one 
                 # position before the first set bit. This approach prevents
                 # us from traveling through an obstacle (we stop right before)
-                # but in in the case of corner tiles, we need to stop exactly
+                # but in in the case of corner tiles, we need to stop exactly 
                 # at the position of the set bit. Hence, +1 below.
-                stop_pos = min(get_number_leading_zeros(corners) + 1, get_number_leading_zeros(obstacles))
+                stop_pos = min(
+                    BitpackedGrid.get_number_leading_zeros(corners) + 1, 
+                    BitpackedGrid.get_number_leading_zeros(obstacles)
+                )
                 break
+
             t_index -= 1
             ta_index -= 1
             corners = self._corner[t_index]
@@ -419,6 +407,35 @@ class BitpackedGrid:
         ret_val = left_of_x - ((start_index - t_index) * BITS_PER_WORD + stop_pos)
         ret_val += (BITS_PER_WORD - start_bit_index)
         return ret_val
+
+    def load_map(self, map_file: str) -> None:
+        """Load map file and initialize traversable and non-traversable cells"""
+        print(f'Loading map: {map_file}')
+        
+        try:
+            with input(map_file, mode='r') as file:
+                map_type, *dims, map_token = [next(file).strip() for _ in range(4)]
+
+                if map_token != 'map':
+                    raise Exception(f'Could not load map; unrecognized format: {map_token}')
+                if map_token == 'octile':
+                    raise Exception(f'Could not load map; only octile types are supported; got: {map_type}')
+                
+                dims = dict([dim.split() for dim in dims])
+                try:
+                    dims['width'] = int(dims['width'])
+                    dims['height'] = int(dims['height'])
+                except Exception as e:
+                    raise Exception(f'Could not load map; invalid height/width: {e}')
+                
+                self.init(**dims)
+                for y in range(dims['height']):
+                    map_line = next(file)
+                    for x in range(dims['width']):
+                        self.set_cell_is_traversable(x, y, map_line[x] == '.')
+            print('Map loaded')
+        except Exception as e:
+            raise Exception(f'Unexpected exception while loading map file: {e}')
 
     def print_binary_cells(self) -> str:
         with StringIO() as out:
@@ -476,23 +493,23 @@ class BitpackedGrid:
                 out.write('\n')
             cells = out.getvalue()
         return cells
+    
+    @staticmethod
+    def get_number_trailing_zeros(value: int) -> int:
+        """Return the number of zero bits following righmost one-bit
+        in the binary representation.
+        If value is zero a.k.a. no one-bits, return 32
+        """
+        if value == 0:
+            return 32
+        return len(s := bin(value)) - len(s.rstrip('0'))
 
-
-def get_number_trailing_zeros(value: int) -> int:
-    """Return the number of zero bits following righmost one-bit
-    in the binary representation.
-    If value is zero a.k.a. no one-bits, return 32
-    """
-    if value == 0:
-        return 32
-    return len(s := bin(value)) - len(s.rstrip('0'))
-
-
-def get_number_leading_zeros(value: int) -> int:
-    """Return the number of zero bits following leftmost one-bit
-    in the 32 bits representation.
-    If value is zero a.k.a. no one-bits, return 32
-    """
-    if value == 0:
-        return 32
-    return len(s := f'{value:032b}') - len(s.lstrip('0'))
+    @staticmethod
+    def get_number_leading_zeros(value: int) -> int:
+        """Return the number of zero bits following leftmost one-bit
+        in the 32 bits representation.
+        If value is zero a.k.a. no one-bits, return 32
+        """
+        if value == 0:
+            return 32
+        return len(s := f'{value:032b}') - len(s.lstrip('0'))

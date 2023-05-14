@@ -7,35 +7,20 @@ class GridPosition:
         x: int = 0,
         y: int = 0
     ):
-        self._x = x
-        self._y = y
+        self.x = x
+        self.y = y
 
-    @property
-    def x(self) -> int:
-        """Get or set X position in the grid"""
-        return self._x
+    def __hash__(self) -> int:
+        return 31 * self.x + self.y
 
-    @x.setter
-    def x(self, x: int) -> None:
-        self._x = x
-
-    @property
-    def y(self) -> int:
-        """Get or set Y position in the grid"""
-        return self._y
-
-    @y.setter
-    def y(self, y: int) -> None:
-        self._y = y
-
-    def __eq__(self, other_position: GridPosition) -> bool:
+    def __eq__(self, gp: GridPosition) -> bool:
         """Check if two grid positions are identical"""
-        if not isinstance(other_position, type(self)):
-            return False
-        elif other_position is self:
+        if self is gp:
             return True
-        return self._x == other_position.x and self._y == other_position.y
+        elif not isinstance(gp, type(self)):
+            return False
+        return self.x == gp.x and self.y == gp.y
 
     def __repr__(self) -> str:
         """Debug representation of the grid position"""
-        return f'[{self._x}, {self._y}]'
+        return f'[{self.x}, {self.y}]'
