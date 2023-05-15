@@ -11,7 +11,7 @@ class ExperimentLoader:
 
         try:
             with input(map_file, mode='r') as file:
-                version_line, exp_line = [next(file).strip() for _ in range(2)]
+                _, exp_line = [next(file).strip() for _ in range(2)]
 
                 experiment_counter = 0
                 while exp_line is not None:

@@ -35,6 +35,8 @@ class Search:
         Target node
     mb_cost_ : float
         Cost between start and target node
+    path_found : bool
+        Flag indicating whether path or not was found
 
     """
 
@@ -66,6 +68,7 @@ class Search:
             super().reset()
 
         def __repr__(self) -> str:
+            """Debug representation of the search node"""
             return f'searchnode {hash(self.data)}; {self.data}'
 
     def __init__(self, expander: ExpansionPolicy):
@@ -84,6 +87,7 @@ class Search:
         self.heap_ops = 0
         self.open.clear()
         self.roots_.clear()
+        self.path_found = False
 
     def print_path(self, current: SearchNode, stream: TextIO) -> None:
         if current.parent is not None:
@@ -125,6 +129,7 @@ class Search:
             if current.data.interval.contains(target.root):
                 # found the goal
                 cost = current.key
+                self.path_found = True
 
                 if self.VERBOSE:
                     self.print_path(current, sys.stderr)
@@ -189,18 +194,6 @@ class Search:
         retval = self.SearchNode(v)
         self.generated += 1
         return retval
-
-    def get_generated(self) -> int:
-        return self.insertions
-
-    def set_generated(self, generated: int) -> None:
-        self.insertions = generated
-
-    def get_touched(self) -> int:
-        return self.generated
-
-    def set_touched(self, touched: int) -> None:
-        self.generated = touched
 
     def run(self) -> None:
         self.mb_cost_ = self.search_costonly(self.mb_start_, self.mb_target_)

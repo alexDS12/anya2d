@@ -51,6 +51,16 @@ class ExpansionPolicy:
         self._heuristic = Heuristic()
         self._euclidean = EuclideanDistanceHeuristic()
 
+    @property
+    def heuristic(self) -> Heuristic:
+        """Get heuristic for evaluating costs"""
+        return self._heuristic
+    
+    @property
+    def grid(self) -> BitpackedGrid:
+        """Get current searching grid"""
+        return self._grid
+
     def expand(self, vertex: Node) -> None:
         """Expand all neighbors of a node"""
         self._cnode = vertex
@@ -83,11 +93,6 @@ class ExpansionPolicy:
         return self._euclidean.h(self._cnode.root.x, self._cnode.root.y, 
                                  self._csucc.root.x, self._csucc.root.y)
 
-    @property
-    def heuristic(self) -> Heuristic:
-        """Get heuristic for evaluating costs"""
-        return self._heuristic
-
     def validate_instance(self, start: Node, target: Node) -> bool:
         """Validate start and target nodes when starting a new search instance"""
         self._start = start
@@ -97,11 +102,6 @@ class ExpansionPolicy:
 
         return (self._grid.get_cell_is_traversable(int(start.root.x), int(start.root.y)) and 
                 self._grid.get_cell_is_traversable(int(target.root.x), int(target.root.y)))
-
-    @property
-    def grid(self) -> BitpackedGrid:
-        """Get current searching grid"""
-        return self._grid
 
     def generate_successors(self, node: Node, retval: List[Node]) -> None:
         """Generate flat and cone successors of a given node based on its Y coordinate.
@@ -437,4 +437,5 @@ class ExpansionPolicy:
                                             node, retval)
 
     def hash(self, n: Node) -> int:
+        """Hash node based on map attrs"""
         return int(n.root.y) * self._grid.map_width + int(n.root.x)

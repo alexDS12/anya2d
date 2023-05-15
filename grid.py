@@ -4,10 +4,9 @@ from vertex import VertexDirections
 from constants import PADDING_, BITS_PER_WORD, LOG2_BITS_PER_WORD, INDEX_MASK
 from io import StringIO
 from fileinput import input
-from typing import List
 
 try:
-    from numpy import zeros, array, ndarray, int64
+    from numpy import zeros, ndarray, int64
 except ImportError as e:
     raise Exception('Unable to import NumPy, make sure you have it installed')
 

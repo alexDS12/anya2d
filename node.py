@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from interval import Interval
-from typing import Optional, List
+from typing import Optional
 
 try:
     from sympy import Point2D, N
@@ -78,26 +78,6 @@ class Node:
     def root(self, root: Point2D) -> None:
         self._root = root
 
-    @staticmethod
-    def add_node_to_list(node_list: List[Node], node: Node) -> None:
-        if Node.not_exists(node_list, node):
-            node_list.append(node)
-
-    @staticmethod
-    def add_node_list_to_list(dest: List[Node], source: List[Node]) -> None:
-        for n in source:
-            Node.add_node_to_list(dest, n)
-
-    @staticmethod
-    def not_exists(node_list: List[Node], node: Node) -> bool:
-        for n in node_list:
-            if n.parent == node.parent and \
-               n.interval.right == node.interval.right and \
-               n.interval.left == node.interval.left and \
-               n.root == node.root:
-                return False
-        return True
-
     def __eq__(self, n: Node) -> bool:
         """Check if two nodes are identical, same interval and XY root"""
         if not isinstance(n, type(self)):
@@ -105,13 +85,12 @@ class Node:
 
         if not n.interval == self._interval:
             return False
-        if n.root.x != self._root.x or n.root.y != self._root.y:
-            return False
-        return True
+        return self._root.equals(n.root)
 
     def __hash__(self) -> int:
+        """Hash node attrs so they can be compared between themselves"""
         return hash((self._interval, self._root))
 
     def __repr__(self) -> str:
         """Debug representation of the node"""
-        return f'Node(root: {self._root}, interval: {self._interval}, f: {self.f}, g: {self.g}, parent: {self._parent})'
+        return f'Node(root: {self._root}, interval: {self._interval}'
