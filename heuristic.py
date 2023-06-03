@@ -1,4 +1,5 @@
-from math import sqrt, nan
+from math import nan
+from functools import cache
 from node import Node
 from vertex import Vertex
 from constants import EPSILON
@@ -17,7 +18,7 @@ class EuclideanDistanceHeuristic:
         return self.h(*n.position, *t.position)
 
     def h(self, x1: float, y1: float, x2: float, y2: float) -> float:
-        return sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+        return ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
 
 
 class Heuristic:
@@ -53,6 +54,7 @@ class Heuristic:
     def __init__(self):
         self._h = EuclideanDistanceHeuristic()
 
+    @cache
     def get_value(
         self,
         n: Node,
@@ -61,9 +63,9 @@ class Heuristic:
         if t is None:
             return 0
 
-        assert t.root.y == t.interval.row and \
-               t.root.x == t.interval.left and \
-               t.root.x == t.interval.right
+        assert (t.root.y == t.interval.row and
+                t.root.x == t.interval.left and
+                t.root.x == t.interval.right)
 
         irow = int(n.interval.row)
         ileft = float(n.interval.left)

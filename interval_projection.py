@@ -11,7 +11,8 @@ except ImportError as e:
 
 
 class IntervalProjection:
-    """Project intervals from one location on the grid onto another. There are two types of projections:
+    """Project intervals from one location on the grid onto another.
+    There are two types of projections:
     - Flat projections 
     - Conical projections
 
@@ -28,9 +29,11 @@ class IntervalProjection:
     row : int
         Y axis denotating which row the interval is projected to
     valid : bool
-        A projection is valid if it is possible to move the endpoints of the interval to the adjacent row (up or down) without intersecting an obstacle
+        A projection is valid if it is possible to move the endpoints of the interval to the 
+        adjacent row (up or down)without intersecting an obstacle
     observable : bool
-        A projection is observable if the projected left endpoint is strictly smaller than the projected right endpoint. NB: a projection can be valid but non-observable
+        A projection is observable if the projected left endpoint is strictly smaller than the projected right endpoint.
+        NB: a projection can be valid but non-observable
     sterile_check_row : int
         Check if successors of a projection are sterile. Only used for conical projection
     check_vis_row : int
@@ -202,8 +205,8 @@ class IntervalProjection:
                 return
             
             # if the tile below is free, we must be going up
-            # else we round the corner and go down			
-            if not grid.get_cell_is_traversable(int(iright - 1), irow):
+            # else we round the corner and go down
+            if not grid.get_cell_is_traversable(int(iright) - 1, irow):
                 # going down
                 self.sterile_check_row = self.row = irow + 1
                 self.check_vis_row = irow
@@ -218,11 +221,12 @@ class IntervalProjection:
         else:
             # look to the left for successors
             assert rootx >= iright, \
-                f'Node X axis must be greater than interval\'s right to find left successors. Got {rootx} and {iright}'
-            
-            can_step = grid.get_cell_is_traversable(int(ileft - 1), irow) and \
-                       grid.get_cell_is_traversable(int(ileft - 1), irow - 1)
-            
+                ('Node X axis must be greater than interval\'s right to find left successors. '
+                 f'Got {rootx} and {iright}')
+
+            can_step = grid.get_cell_is_traversable(int(ileft) - 1, irow) and \
+                       grid.get_cell_is_traversable(int(ileft) - 1, irow - 1)
+
             if not can_step:
                 self.valid = False
                 self.observable = False
@@ -241,7 +245,6 @@ class IntervalProjection:
                 self.sterile_check_row = irow - 2	
             
             self.right = self.max_right = ileft
-            self.left = self.max_left = grid.scan_cells_left(int(self.right - 1), self.check_vis_row) + 1
-
+            self.left = self.max_left = grid.scan_cells_left(int(self.right) - 1, self.check_vis_row) + 1
         self.valid = True
         self.observable = False

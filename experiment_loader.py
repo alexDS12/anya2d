@@ -1,4 +1,4 @@
-import traceback
+from traceback import format_exc
 from re import split
 from experiment import Experiment
 from fileinput import input
@@ -23,7 +23,7 @@ class ExperimentLoader:
 
                     try:                        
                         exp = Experiment(
-                            title       = f'Experiment #{experiment_counter}',
+                            title       = str(experiment_counter),
                             map_file    = exp_tokens[1],
                             x_size      = int(exp_tokens[2]),
                             y_size      = int(exp_tokens[3]),
@@ -34,7 +34,7 @@ class ExperimentLoader:
                             upper_bound = float(exp_tokens[8])
                         )
                     except Exception as e:
-                        print(traceback.format_exc())
+                        print(format_exc())
                         exp_line = next(file).strip()
                         continue
                     
@@ -47,4 +47,4 @@ class ExperimentLoader:
                         break
             return exp_list
         except Exception as e:
-            raise Exception(traceback.format_exc())
+            raise Exception(format_exc())

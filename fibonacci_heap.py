@@ -11,8 +11,7 @@ from numbers import Number
 try:
     from multipledispatch import dispatch
 except ImportError as e:
-    raise Exception(
-        'Unable to import multipledispatch, make sure you have it installed')
+    raise Exception('Unable to import multipledispatch, make sure you have it installed')
 
 
 class FibonacciHeap:
@@ -84,7 +83,12 @@ class FibonacciHeap:
             self._min_node = x
 
     @dispatch(FibonacciHeapNode, Number, Number)
-    def decrease_key(self, x: FibonacciHeapNode, new_key: Number, new_secondary_key: Number) -> None:
+    def decrease_key(
+        self,
+        x: FibonacciHeapNode,
+        new_key: Number,
+        new_secondary_key: Number
+    ) -> None:
         """Update the priority of a heap element using as its priority
         (i.e. secondaryKey used for tie-breaking). Created by dharabor
         """
@@ -128,7 +132,12 @@ class FibonacciHeap:
         self._n_nodes += 1
 
     @dispatch(FibonacciHeapNode, Number, Number)
-    def insert(self, node: FibonacciHeapNode, key: Number, secondary_key: Number) -> None:
+    def insert(
+        self,
+        node: FibonacciHeapNode,
+        key: Number,
+        secondary_key: Number
+    ) -> None:
         """Insert a new element into the heap with a priority based on
         key and secondary_key
         (i.e. secondary_key used for tie-breaking). Created by dharabor
@@ -136,17 +145,22 @@ class FibonacciHeap:
         node.secondary_key = secondary_key
         self.insert(node, key)
 
-    # @property min_node
-    def min(self) -> FibonacciHeapNode:
-        """Returns the smallest element in the heap. This smallest element is the
-        one with the minimum key value.
+    @property
+    def min_node(self) -> FibonacciHeapNode:
+        """Returns the smallest element in the heap. 
+        This smallest element is the one with the minimum key value.
         Running time: O(1) actual
         """
         return self._min_node
+    
+    @min_node.setter
+    def min_node(self, min_node: FibonacciHeapNode) -> None:
+        self._min_node = min_node
 
     def remove_min(self) -> FibonacciHeapNode:
-        """Removes the smallest element from the heap. This will cause the trees in
-        the heap to be consolidated, if necessary.
+        """Removes the smallest element from the heap. 
+        This will cause the trees in the heap to be consolidated,
+        if necessary.
         Running time: O(log n) amortized
         """
         z: FibonacciHeapNode = self._min_node
@@ -157,7 +171,7 @@ class FibonacciHeap:
 
             # for each child of z do...
             while num_kids > 0:
-                temp_right: FibonacciHeapNode = x.right
+                temp_right = x.right
 
                 # remove x from child list
                 x.left.right = x.right
@@ -189,45 +203,50 @@ class FibonacciHeap:
 
         return z
 
-    # @property n_nodes
-    def size(self) -> int:
-        """Returns the size of the heap which is measured in the number of elements
-        contained in the heap.
+    @property
+    def n_nodes(self) -> int:
+        """Returns the size of the heap which is measured in 
+        the number of elements contained in the heap.
         Running time: O(1) actual
         """
         return self._n_nodes
+    
+    @n_nodes.setter
+    def n_nodes(self, n_nodes: int) -> None:
+        self._n_nodes = n_nodes
 
     @staticmethod
     def union(h1: FibonacciHeap, h2: FibonacciHeap) -> FibonacciHeap:
-        """Joins two Fibonacci heaps into a new one. No heap consolidation is
-        performed at this time. The two root lists are simply joined together.
+        """Joins two Fibonacci heaps into a new one.
+        No heap consolidation is performed at this time.
+        The two root lists are simply joined together.
         Running time: O(1) actual
         """
         h = FibonacciHeap()
 
         if h1 is not None and h2 is not None:
-            h._min_node = h1._min_node
+            h.min_node = h1.min_node
 
-            if h._min_node is not None:
-                if h2._min_node is not None:
-                    h._min_node.right.left = h2._min_node.left
-                    h2._min_node.left.right = h._min_node.right
+            if h.min_node is not None:
+                if h2.min_node is not None:
+                    h.min_node.right.left = h2.min_node.left
+                    h2.min_node.left.right = h.min_node.right
+                    h.min_node.right = h2.min_node
+                    h2.min_node.left = h.min_node
 
-                    h._min_node.right = h2._min_node
-                    h2._min_node.left = h._min_node
-
-                    if h2._min_node < h1._min_node:
-                        h._min_node = h2._min_node
+                    if h2.min_node < h1.min_node:
+                        h.min_node = h2.min_node
             else:
-                h._min_node = h2._min_node
+                h.min_node = h2.min_node
 
-            h._min_node = h1._min_node + h2._min_node
+            h.n_nodes = h1.n_nodes + h2.n_nodes
 
         return h
 
     def cascading_cut(self, y: FibonacciHeapNode) -> None:
-        """Performs a cascading cut operation. This cuts y from its parent and then
-        does the same for its parent, and so on up the tree.
+        """Performs a cascading cut operation.
+        This cuts y from its parent and then does the same
+        for its parent, and so on up the tree.
         Running time: O(log n); O(1) excluding the recursion
         """
         z: FibonacciHeapNode = y.parent
@@ -281,9 +300,7 @@ class FibonacciHeap:
                 # There is, make one of the nodes a child of the other.
                 # Do this based on the key value.
                 if y < x:
-                    temp: FibonacciHeapNode = y
-                    y = x
-                    x = temp
+                    x, y = y, x
 
                 # y disappears from root list.
                 self.link(y, x)
@@ -328,8 +345,9 @@ class FibonacciHeap:
                 self._min_node = y
 
     def cut(self, x: FibonacciHeapNode, y: FibonacciHeapNode) -> None:
-        """The reverse of the link operation: removes x from the child list of y.
-        This method assumes that min is non-null.
+        """The reverse of the link operation: removes x 
+        from the child list of y. This method assumes that
+        min is non-null.
         Running time: O(1)
         """
         # remove x from childlist of y and decrement degree[y]
@@ -367,7 +385,7 @@ class FibonacciHeap:
         # make y a child of x
         y.parent = x
 
-        if x.child is None:
+        if x.child == None:
             x.child = y
             y.right = y
             y.left = y

@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 from interval import Interval
+from point import Point2D
 from typing import Optional
-
-try:
-    from sympy import Point2D, N
-except ImportError as e:
-    raise Exception('Unable to import SymPy, make sure you have it installed')
 
 
 class Node:
     """Search node representation.
     A search node is a tuple (interval, root) where interval does not contain the root.
+    Moreover, a search node and its parents represent a single path between the points
+    from the root to the current node
 
     Attributes
     ----------
@@ -23,8 +21,9 @@ class Node:
         Parent node of current node
     f : float
         Calculated total cost for node
-    g: float
-        Distance between current and start nodes based on parent's distance and Euclidian distance between parent and current nodes
+    g : float
+        Distance between current and start nodes based on parent's distance and 
+        Euclidean distance between parent and current nodes
 
     """
 
@@ -39,7 +38,8 @@ class Node:
         self._parent = parent
 
         self.f = 0
-        self.g = 0 if self._parent is None else self._parent.g + N(self._parent.root.distance(self._root))
+        self.g = (0 if self._parent is None
+                  else self._parent.g + self._parent.root.distance(self._root))
     
     @classmethod
     def from_points(
@@ -49,6 +49,7 @@ class Node:
         rooty: int, 
         parent: Optional[Node] = None
     ) -> Node:
+        """Create node based on raw points"""
         return cls(interval, Point2D(rootx, rooty), parent)
 
     @property
@@ -85,12 +86,12 @@ class Node:
 
         if not n.interval == self._interval:
             return False
-        return self._root.equals(n.root)
+        return self._root == n.root
 
     def __hash__(self) -> int:
-        """Hash node attrs so they can be compared between themselves"""
-        return hash((self._interval, self._root))
+        """Hash node attrs so nodes can be compared between themselves"""
+        return super().__hash__()
 
     def __repr__(self) -> str:
         """Debug representation of the node"""
-        return f'Node(root: {self._root}, interval: {self._interval}'
+        return f'root: {self._root}, {self._interval}'

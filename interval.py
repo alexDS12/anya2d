@@ -1,11 +1,7 @@
 from __future__ import annotations
 
+from point import Point2D
 from constants import DOUBLE_INEQUALITY_THRESHOLD, EPSILON
-
-try:
-    from sympy import Point2D
-except ImportError as e:
-    raise Exception('Unable to import SymPy, make sure you have it installed')
 
 
 class Interval:
@@ -78,16 +74,17 @@ class Interval:
 
     def covers(self, i: Interval) -> bool:
         """Check if intervals are identical or if this interval covers interval `i`"""
-        if abs(i.left - self._left) < DOUBLE_INEQUALITY_THRESHOLD and \
-           abs(i.right - self._right) < DOUBLE_INEQUALITY_THRESHOLD and \
-           i.row == self._row:
+        if self == i:
             return True
+
         return self._left <= i.left and self._right >= i.right and self._row == i.row
 
     def contains(self, p: Point2D) -> bool:
-        """Check if a point is in the interval. row is Y whereas left and right control X"""
-        return (int(p.y) == self._row and
-                (p.x + EPSILON) >= self._left and
+        """Check if a point is in the interval. 
+        row is Y whereas left and right control X
+        """
+        return (int(p.y) == self._row and 
+                (p.x + EPSILON) >= self._left and 
                 p.x <= (self._right + EPSILON))
 
     def __eq__(self, i: Interval) -> bool:
@@ -100,8 +97,9 @@ class Interval:
                i.row == self._row
 
     def __hash__(self) -> int:
+        """Hash interval attrs so intervals can be compared"""
         return hash((self._left, self._right, self._row))
 
     def __repr__(self) -> str:
         """Debug representation of the interval"""
-        return f'Interval(left: {self._left}, right: {self._right}, row: {self._row})'
+        return f'Interval({self._left}, {self._right}, {self._row})'

@@ -10,7 +10,7 @@ class MicroBenchmark:
         self.max_time = -1
         self.min_time = maxsize
 
-    def benchmark(self, reps: int) -> float:
+    def benchmark(self, reps: int) -> int:
         """Run an experiment and record some statistics. 
         Experiments are run repeatedly until the recorded time
         """
@@ -31,7 +31,7 @@ class MicroBenchmark:
         if (total_time / 1000000) == 0:
             self.benchmark(reps * 2)
 
-        return ((time_ns() - wall_start) / 1000) + 0.5
+        return int(((time_ns() - wall_start) / 1000) + 0.5)
 
     def run(self, valid_iteration: bool) -> None:
         start = time_ns()

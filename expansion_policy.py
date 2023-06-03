@@ -8,8 +8,7 @@ from typing import List, Optional
 
 
 class ExpansionPolicy:
-    """Policy to expand nodes and generate their successors.
-    A new search always starts on an off-grid node.
+    """Policy to expand nodes and generate their successors
 
     Attributes
     ----------
@@ -21,7 +20,7 @@ class ExpansionPolicy:
         List of successors of the node currently being expanded
     _heuristic : Heuristic
         Heuristic to evaluate movement costs from a given node to another
-    _euclidean : Heuristic
+    _euclidean : EuclideanDistanceHeuristic
         Heuristic to calculate distance between points
     _start : Node
         Start node when starting a new search
@@ -39,21 +38,21 @@ class ExpansionPolicy:
         Current node that is being expanded
 
     """
-	
+
     def __init__(
         self,
-        map_file: str,
+        file_name: str,
         prune: bool = True
     ):
-        self._grid = BitpackedGrid(map_file=map_file)
+        self._grid = BitpackedGrid(map_file=file_name)
         self._prune = prune
-        self._successors = []
+        self._successors: List[Node] = []
         self._heuristic = Heuristic()
         self._euclidean = EuclideanDistanceHeuristic()
 
     @property
     def heuristic(self) -> Heuristic:
-        """Get heuristic for evaluating costs"""
+        """Get heuristic used for this policy instance"""
         return self._heuristic
     
     @property
@@ -76,7 +75,7 @@ class ExpansionPolicy:
     def next(self) -> Optional[Node]:
         """Get next neighbor, if one exists, of the node being expanded"""
         self._csucc = None
-        if self._idx_succ < len(self._successors):
+        if self.has_next():
             self._csucc = self._successors[self._idx_succ]
             self._idx_succ += 1
         return self._csucc
@@ -88,7 +87,8 @@ class ExpansionPolicy:
     def step_cost(self) -> float:
         """Get Euclidean distance between the node that's being expanded and next neighbor"""
         assert self._cnode is not None and self._csucc is not None, \
-            f'Node under expansion and/or next successor node are/is None. Got: {self._cnode} and {self._csucc}'
+            ('Node under expansion and/or next successor node are/is None. '
+             f'Got: {type(self._cnode)} and {type(self._csucc)}')
         
         return self._euclidean.h(self._cnode.root.x, self._cnode.root.y, 
                                  self._csucc.root.x, self._csucc.root.y)
@@ -104,7 +104,8 @@ class ExpansionPolicy:
                 self._grid.get_cell_is_traversable(int(target.root.x), int(target.root.y)))
 
     def generate_successors(self, node: Node, retval: List[Node]) -> None:
-        """Generate flat and cone successors of a given node based on its Y coordinate.
+        """Generate observable and non-observable flat and cone successors 
+        of a given node based on its Y coordinate.
         Project node's interval onto the next row
         """
         projection = IntervalProjection()
@@ -121,38 +122,46 @@ class ExpansionPolicy:
             self.cone_node_nobs(node, retval, projection)
 
     def generate_start_successors(self, node: Node, retval: List[Node]) -> None:
-        """Generate first successors of an off-grid node"""
+        """Generate first successors of an off-grid node
+        No movements allowed if start node is non-traversable and double corner.
+        Generate successors from all start point's sides, they are:
+        - flat observable successors from the left;
+        - flat observable successors from the right;
+        - conical observable successors below;
+        - conical observable successors above
+        """
         assert (node.interval.left == node.interval.right and
                 node.interval.left == node.root.x and
                 node.interval.row == node.root.y), \
-                    f'Off-grid node\'s interval must contain only that node. Expected row == y; left == right == x'
-
-        # certain successors will be ignored if the start is a double-corner
-        start_dc = self._grid.get_point_is_double_corner(int(node.root.x), int(node.root.y))
-
-        # certain start locations are ambiguous; we don't try to solve these
-        if start_dc and not self._grid.get_cell_is_traversable(int(node.root.x), int(node.root.y)):
-            return
+                    ('Off-grid node\'s interval must contain only that node. '
+                     'Expected row == y; left == right == x')
 
         rootx = int(node.root.x)
         rooty = int(node.root.y)
+
+        # certain successors will be ignored if the start is a double-corner
+        start_dc = self._grid.get_point_is_double_corner(rootx, rooty)
+
+        # certain start locations are ambiguous; we don't try to solve these
+        if start_dc and not self._grid.get_cell_is_traversable(rootx, rooty):
+            return
             
         # generate flat observable successors left of the start point
         # NB: hacky implementation; we use a fake root for the projection
         projection = IntervalProjection()
         if not start_dc:
             projection.project(rootx, rootx, rooty,
-                               rootx + 1, rooty, self._grid)
+                                rootx + 1, rooty, self._grid)
             self.generate_observable_flat__(projection, rootx, rooty, node, retval)
 
         # generate flat observable successors right of the start point
         # NB: hacky implementation; we use a fake root for the projection
         projection.project(rootx, rootx, rooty,
-                           rootx - 1, rooty, self._grid)
+                            rootx - 1, rooty, self._grid)
         self.generate_observable_flat__(projection, rootx, rooty, node, retval)
 
-        # generate conical observable successors below the start point 
-        max_left = self._grid.scan_cells_left(rootx, rooty) + 1
+        # generate conical observable successors below the start point
+        max_left = self._grid.scan_cells_left(rootx, rooty) +  1
         max_right = self._grid.scan_cells_right(rootx, rooty)
         if max_left != rootx and not start_dc:
             self.split_interval_make_successors(max_left, rootx, rooty + 1,
@@ -167,7 +176,7 @@ class ExpansionPolicy:
         max_right = self._grid.scan_cells_right(rootx, rooty - 1)
         if max_left != rootx and not start_dc:
             self.split_interval_make_successors(max_left, rootx, rooty - 1,
-                                                rootx, rooty, rooty - 2, node, retval) 	
+                                                rootx, rooty, rooty - 2, node, retval)
 
         if max_right != rootx:
             self.split_interval_make_successors(rootx, max_right, rooty - 1,
@@ -184,8 +193,9 @@ class ExpansionPolicy:
         parent: Node,
         retval: List[Node]
     ) -> None:
-        """After projecting the interval, split at each internal
-        corner to generate new observable sucessors
+        """After projecting the interval, split recursively at each internal
+        corner to generate new observable sucessors, only if the projection
+        is not only valid but also observable
         """
         if max_left == max_right:
             return
@@ -207,11 +217,13 @@ class ExpansionPolicy:
                 successor.interval.left = max_left if succ_left < max_left else succ_left
                 retval.append(successor)
 
-            if not (succ_left != succ_right and succ_left > max_left):
+            if not ((succ_left != succ_right) and (succ_left > max_left)):
                 break
 
-        if (not forced_succ and len(retval) == (num_successors + 1) and
+        if (not forced_succ and
+            len(retval) == (num_successors + 1) and
             self.intermediate(successor.interval, rootx, rooty)):
+
             del retval[-1]
 
             proj = IntervalProjection()
@@ -219,20 +231,24 @@ class ExpansionPolicy:
                               successor.interval.row, rootx, rooty, self._grid)
             if proj.valid and proj.observable:
                 self.split_interval_make_successors(proj.left, proj.right, proj.row,
-                                                    rootx, rooty, proj.sterile_check_row, parent, retval)
+                                                    rootx, rooty, proj.sterile_check_row,
+                                                    parent, retval)
 
     def sterile(self, left: float, right: float, row: int) -> bool:
-        """Check if non-discrete left and right points are adjacent to obstacle cells on row"""
+        """Check if non-discrete left and right points are adjacent to 
+        obstacle cells on row
+        """
         r = int(right - EPSILON)
         l = int(left + EPSILON)
+
         return not ((self._grid.get_cell_is_traversable(l, row) and
                      self._grid.get_cell_is_traversable(r, row)))
 
     def intermediate(self, interval: Interval, rootx: int, rooty: int) -> bool:
         """Return True if the interval has no adjacent successors.
         Intermediate nodes have intervals that are not taut; i.e.
-        their endpoints are not adjacent to any location that cannot be
-        directly observed from the root
+        their endpoints are not adjacent to any location that cannot 
+        be directly observed from the root
         """
         left = interval.left
         right = interval.right
@@ -244,44 +260,51 @@ class ExpansionPolicy:
         discrete_left = interval.discrete_left
         discrete_right = interval.discrete_right
 
-        rightroot = ((tmp_right - rootx) >> 31) == 1
-        leftroot = ((rootx - tmp_left) >> 31) == 1
-        
+        rightroot = abs((tmp_right - rootx) >> 31) == 1
+        leftroot = abs((rootx - tmp_left) >> 31) == 1
+
         right_turning_point = False
         left_turning_point = False
         
         if rooty < row:
-            left_turning_point = discrete_left and \
-                                 self._grid.get_point_is_corner(tmp_left, row) and \
-                                 (not self._grid.get_cell_is_traversable(tmp_left - 1, row - 1) or leftroot)
+            left_turning_point = (discrete_left and 
+                                  self._grid.get_point_is_corner(tmp_left, row) and
+                                  (not self._grid.get_cell_is_traversable(tmp_left - 1, row - 1) or leftroot))
 
-            right_turning_point = discrete_right and \
-                                  self._grid.get_point_is_corner(tmp_right, row) and \
-                                  (not self._grid.get_cell_is_traversable(tmp_right, row - 1) or rightroot)				       	
+            right_turning_point = (discrete_right and
+                                   self._grid.get_point_is_corner(tmp_right, row) and
+                                   (not self._grid.get_cell_is_traversable(tmp_right, row - 1) or rightroot))	       	
+
         else:
-            left_turning_point = discrete_left and \
-                                 self._grid.get_point_is_corner(tmp_left, row) and \
-                                 (not self._grid.get_cell_is_traversable(tmp_left - 1, row) or leftroot)
+            left_turning_point = (discrete_left and
+                                  self._grid.get_point_is_corner(tmp_left, row) and
+                                  (not self._grid.get_cell_is_traversable(tmp_left - 1, row) or leftroot))
 
-            right_turning_point = discrete_right and \
-                                  self._grid.get_point_is_corner(tmp_right, row) and \
-                                  (not self._grid.get_cell_is_traversable(tmp_right, row) or rightroot)
-                
-        return not ((discrete_left and left_turning_point) or (discrete_right and right_turning_point))
+            right_turning_point = (discrete_right and
+                                   self._grid.get_point_is_corner(tmp_right, row) and
+                                   (not self._grid.get_cell_is_traversable(tmp_right, row) or rightroot))
+
+        return not ((discrete_left and left_turning_point) or 
+                    (discrete_right and right_turning_point))
 
     def contains_target(self, left: float, right: float, row: int) -> bool:
-        """Check if an given interval contains the target node"""
-        return row == self._ty and self._tx >= (left - EPSILON) and self._tx <= (right + EPSILON)
+        """Check if a given interval contains the target node"""
+        return row == self._ty and self._tx >= left and self._tx <= right
 
-    def cone_node_obs(self, node: Node, retval: List[Node], projection: IntervalProjection) -> None:
+    def cone_node_obs(
+        self,
+        node: Node,
+        retval: List[Node], 
+        projection: IntervalProjection
+    ) -> None:
         """There is an inductive argument here: if the move is not valid
         the node should have been pruned. check this is always true
         """
         assert node.root.y != node.interval.row, \
-            f'Node interval and root must not be on the same row. Got {node.root.y} and {node.interval.row}'
+            ('Node interval and root must not be on the same row. '
+             f'Got {node.root.y} and {node.interval.row}')
 
-        root = node.root
-        self.generate_observable_cone__(projection, int(root.x), int(root.y), node, retval)
+        self.generate_observable_cone__(projection, int(node.root.x), int(node.root.y), node, retval)
 
     def generate_observable_cone__(
         self,
@@ -300,7 +323,12 @@ class ExpansionPolicy:
                                             int(projection.row), rootx, rooty,
                                             projection.sterile_check_row, parent, retval)
 
-    def cone_node_nobs(self, node: Node, retval: List[Node], projection: IntervalProjection) -> None:
+    def cone_node_nobs(
+        self,
+        node: Node,
+        retval: List[Node],
+        projection: IntervalProjection
+    ) -> None:
         """There are two kinds of non-observable successors:
         (i) conical successors that are adjacent to an observable projection
         (ii) flat successors that are adjacent to the current interval
@@ -317,22 +345,24 @@ class ExpansionPolicy:
 
         # non-observable successor type (iii)
         if not projection.observable:
-            if (node.root.x > iright and node.interval.discrete_right and 
+            if (node.root.x > iright and
+                node.interval.discrete_right and
                 self._grid.get_point_is_corner(int(iright), irow)):
                 
                 self.split_interval_make_successors(projection.max_left, iright, projection.row,
                                                     int(iright), irow, projection.sterile_check_row,
                                                     node, retval)
 
-            elif (node.root.x < ileft and node.interval.discrete_left and 
+            elif (node.root.x < ileft and
+                  node.interval.discrete_left and
                   self._grid.get_point_is_corner(int(ileft), irow)):
                 self.split_interval_make_successors(ileft, projection.max_right, projection.row,
                                                     int(ileft), irow, projection.sterile_check_row,
                                                     node, retval)
 
             if (node.interval.discrete_left and 
-                not self._grid.get_cell_is_traversable(int(ileft - 1), projection.type_iii_check_row) and 
-                self._grid.get_cell_is_traversable(int(ileft - 1), projection.check_vis_row)):
+                not self._grid.get_cell_is_traversable(int(ileft) - 1, projection.type_iii_check_row) and 
+                self._grid.get_cell_is_traversable(int(ileft) - 1, projection.check_vis_row)):
                 # non-observable successors to the left of the current interval
                 projection.project_flat(ileft - self._grid.smallest_step_div2, ileft, 
                                         int(ileft), int(irow), self._grid)
@@ -351,14 +381,14 @@ class ExpansionPolicy:
 
         # non-observable successors type (i) and (ii)
         flatprj = IntervalProjection() 	
-        corner_row = irow - ((int(node.root.y) - irow) >> 31)
+        corner_row = irow - abs((int(node.root.y) - irow) >> 31)
 
         # non-observable successors to the left of the current interval
         if node.interval.discrete_left and self._grid.get_point_is_corner(int(ileft), irow):
             # flat successors from the interval row
             if not self._grid.get_cell_is_traversable(int(ileft - 1), corner_row):
                 flatprj.project(ileft - EPSILON, iright, 
-                                int(irow), int(ileft), int(irow), self._grid)
+                                 int(irow), int(ileft), int(irow), self._grid)
                 
                 self.generate_observable_flat__(flatprj, int(ileft), irow, node, retval) 	    				
 
@@ -372,7 +402,7 @@ class ExpansionPolicy:
             # flat successors from the interval row
             if not self._grid.get_cell_is_traversable(int(iright), corner_row):			
                 flatprj.project(ileft, iright + EPSILON, 
-                                int(irow), int(ileft), int(irow), self._grid)
+                                 int(irow), int(ileft), int(irow), self._grid)
 
                 self.generate_observable_flat__(flatprj, int(iright), irow, node, retval)
             
@@ -380,9 +410,14 @@ class ExpansionPolicy:
             self.split_interval_make_successors(projection.right, projection.max_right, projection.row, 
                                                 int(iright), irow, projection.sterile_check_row, node, retval)
 
-    def flat_node_obs(self, node: Node, retval: List[Node], projection: IntervalProjection) -> None:
-        root = node.root
-        self.generate_observable_flat__(projection, int(root.x), int(root.y), node, retval)
+    def flat_node_obs(
+        self,
+        node: Node,
+        retval: List[Node],
+        projection: IntervalProjection
+    ) -> None:
+        """Generate observable flat successors"""
+        self.generate_observable_flat__(projection, int(node.root.x), int(node.root.y), node, retval)
 
     def generate_observable_flat__(
         self,
@@ -405,7 +440,7 @@ class ExpansionPolicy:
         if projection.intermediate and self._prune and not goal_interval:
             # ignore intermediate nodes and project further along the row
             projection.project(projection.left, projection.right, projection.row,
-                               rootx, rooty, self._grid)
+                                rootx, rooty, self._grid)
             
             # check if the projection contains the goal
             goal_interval = self.contains_target(projection.left, projection.right, projection.row)
@@ -420,7 +455,12 @@ class ExpansionPolicy:
                 )
             )
 
-    def flat_node_nobs(self, node: Node, retval: List[Node], projection: IntervalProjection) -> None:
+    def flat_node_nobs(
+        self,
+        node: Node,
+        retval: List[Node],
+        projection: IntervalProjection
+    ) -> None:
         """Generate non-observable flat successors"""
         if not projection.valid: 
             return

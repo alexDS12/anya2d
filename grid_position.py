@@ -17,9 +17,13 @@ class GridPosition:
         """Check if two grid positions are identical"""
         if self is gp:
             return True
-        elif not isinstance(gp, type(self)):
+        if not isinstance(gp, type(self)):
             return False
-        return self.x == gp.x and self.y == gp.y
+        if self.y != gp.x:
+            return False
+        if self.y != gp.y:
+            return False
+        return True
 
     def __repr__(self) -> str:
         """Debug representation of the grid position"""

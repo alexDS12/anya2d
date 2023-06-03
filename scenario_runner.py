@@ -1,5 +1,5 @@
-import traceback
-import argparse
+from traceback import format_exc
+from argparse import ArgumentParser
 from experiment_loader import ExperimentLoader
 from search import Search
 from expansion_policy import ExpansionPolicy
@@ -7,16 +7,12 @@ from micro_benchmark import MicroBenchmark
 from node import Node
 from interval import Interval
 
-try:
-    from sympy import Point2D
-except ImportError as e:
-    raise Exception('Unable to import SymPy, make sure you have it installed')
-
 
 class ScenarioRunner:
     MAP_DIR = 'maps'
     RESULT_DIR = 'results'
     VERBOSE = False
+    VISUALIZER = False
     EXP_HEADER = 'exp;path_found;alg;wallt_micro;runt_micro;'+ \
         'expanded;generated;heapops;start;target;gridcost;realcost;map'
 
@@ -38,14 +34,14 @@ class ScenarioRunner:
             if ScenarioRunner.VERBOSE:
                 anya.VERBOSE = ScenarioRunner.VERBOSE
         except Exception as e:
-            print(traceback.format_exc())
+            print(format_exc())
             return
 
         exp_runner = MicroBenchmark(anya)
-        res_file = open(f"{ScenarioRunner.RESULT_DIR}/{map_file.replace('.map', '.txt')}", 'w')
+        #res_file = open(f"{ScenarioRunner.RESULT_DIR}/{map_file.replace('.map', '.txt')}", 'w')
         
         print(ScenarioRunner.EXP_HEADER)
-        print(ScenarioRunner.EXP_HEADER, file=res_file)
+        #print(ScenarioRunner.EXP_HEADER, file=res_file)
 
         start = Node.from_points(Interval(0, 0, 0), 0, 0)
         target = Node.from_points(Interval(0, 0, 0), 0, 0)
@@ -54,10 +50,10 @@ class ScenarioRunner:
         anya.mb_target_ = target
 
         for exp in experiments:            
-            start.root = Point2D(exp.start_x, exp.start_y)
+            start.root.set_location(exp.start_x, exp.start_y)
             start.interval.init(exp.start_x, exp.start_x, exp.start_y)
             
-            target.root = Point2D(exp.end_x, exp.end_y)
+            target.root.set_location(exp.end_x, exp.end_y)
             target.interval.init(exp.end_x, exp.end_x, exp.end_y)
                     
             wallt_micro = exp_runner.benchmark(1)
@@ -70,13 +66,13 @@ class ScenarioRunner:
                 f'({exp.start_x},{exp.start_y});({exp.end_x},{exp.end_y});'
                 f'{exp.upper_bound};{cost};{exp.map_file}'
             )
-            print(res_exp, file=res_file)
+            #print(res_exp, file=res_file)
             print(res_exp)
-        res_file.close()
+        #res_file.close()
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = ArgumentParser()
     parser.add_argument('-scen', '--scenario', 
                         help='Map scenario to run experiments', required=True)
     

@@ -9,7 +9,10 @@ from typing import Dict, TextIO
 
 
 class Search:
-    """An implementation of the Anya search algorithm
+    """An implementation of the Anya search algorithm.
+    A new search always starts on an off-grid node which is only
+    visible from the start node. The corresponding cost from 
+    the off-grid node to start node is zero
 
     Attributes
     ----------
@@ -18,7 +21,7 @@ class Search:
     _heuristic : Heuristic
         Heuristic to evaluate movement costs from a given node to another
     roots_ : Dict[int, self.SearchNode]
-        Tracks if the node has been expanded
+        Tracks if the node has been expanded. Helps to avoid root-level redundancy
     expanded : int
         Tracks how many nodes were expanded
     insertions : int
@@ -36,7 +39,8 @@ class Search:
     mb_cost_ : float
         Cost between start and target node
     path_found : bool
-        Flag indicating whether path or not was found
+        Flag indicating whether or not path was found
+    last_node_parent : SearchNode
 
     """
 
@@ -44,7 +48,8 @@ class Search:
     VERBOSE = False
 
     class SearchNode(FibonacciHeapNode):
-        """This class holds various bits of data needed to drive the search
+        """This class holds various bits of data needed
+        to drive the search
 
         Attributes
         ----------
@@ -62,6 +67,7 @@ class Search:
             self.search_id = -1
 
         def reset(self) -> None:
+            """Reset search node attrs"""
             self.parent = None
             self.search_id = Search.SEARCH_ID_COUNTER
             self.closed = False
@@ -72,7 +78,7 @@ class Search:
             return f'searchnode {hash(self.data)}; {self.data}'
 
     def __init__(self, expander: ExpansionPolicy):
-        self.roots_: Dict[int, self.SearchNode] = {}
+        self.roots_ = {}
         self.open = FibonacciHeap()
         self._heuristic = expander.heuristic
         self._expander = expander
@@ -80,6 +86,7 @@ class Search:
         self.mb_target_ = None
 
     def init(self) -> None:
+        """Initialize open, closed and counters for a new search"""
         self.SEARCH_ID_COUNTER += 1
         self.expanded = 0
         self.insertions = 0
@@ -90,6 +97,9 @@ class Search:
         self.path_found = False
 
     def print_path(self, current: SearchNode, stream: TextIO) -> None:
+        """Get path starting from the first search node that is a parent
+        to the last node before target
+        """
         if current.parent is not None:
             self.print_path(current.parent, stream)
         print(f'{hash(current.data)}; {current.data.root}; g={current.secondary_key}', file=stream)
@@ -108,6 +118,12 @@ class Search:
         return path
 
     def search_costonly(self, start: Node, target: Node) -> float:
+        """Perform path search from `start` to `target` if one exists.
+        Initialize start search node and insert into the priority queue
+        where later on lowest f-value nodes will be expanded.
+        Iterate over all successors queued and update their g-value
+        based on Harabor's strategy to avoid root-level redundancies
+        """
         self.init()
         cost = -1
         if not self._expander.validate_instance(start, target):
@@ -119,17 +135,19 @@ class Search:
         self.open.insert(start_node, self._heuristic.get_value(start, target), 0)
 
         while not self.open.is_empty():
-            current: self.SearchNode = self.open.remove_min()
+            current = self.open.remove_min()
             if self.VERBOSE:
                 print(f'expanding (f={current.key}) {current}')
 
             self._expander.expand(current.data)
             self.expanded += 1
             self.heap_ops += 1
+
             if current.data.interval.contains(target.root):
                 # found the goal
                 cost = current.key
                 self.path_found = True
+                self.last_node_parent = current
 
                 if self.VERBOSE:
                     self.print_path(current, sys.stderr)
@@ -150,13 +168,20 @@ class Search:
                 root_rep = self.roots_.get(root_hash)
                 new_g_value = current.secondary_key + self._expander.step_cost()
 
-                # Root level pruning:
-                # We prune a node if its g-value is larger than the best
-                # distance to its root point. In the case that the g-value
-                # is equal to the best known distance, we prune only if the
-                # node isn't a sibling of the node with the best distance or
-                # if the node with the best distance isn't the immediate parent
+                """Root level pruning:
+                We prune a node if its g-value is larger than the best
+                distance to its root point. In the case that the g-value
+                is equal to the best known distance, we prune only if the
+                node isn't a sibling of the node with the best distance or
+                if the node with the best distance isn't the immediate parent
+                """
                 if root_rep is not None:
+                    """Secondary key stores the g-value of the node
+                    We check if the root has a g-value <= than current value.
+                    If the value improves, the node is added to the open list
+                    while updating its g-value in the root history.
+                    If it doesn't, we discard the node
+                    """
                     root_best_g = root_rep.secondary_key
                     insert = (new_g_value - root_best_g) <= EPSILON
                     eq = (new_g_value - root_best_g) >= -EPSILON
@@ -191,9 +216,11 @@ class Search:
         return cost
 
     def generate(self, v: Node) -> SearchNode:
+        """Generate a new search node that acts as Fibonacci heap node under the hood"""
         retval = self.SearchNode(v)
         self.generated += 1
         return retval
 
     def run(self) -> None:
+        """Initiate a new search based on current start and target nodes"""
         self.mb_cost_ = self.search_costonly(self.mb_start_, self.mb_target_)

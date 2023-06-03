@@ -34,11 +34,12 @@ class Path:
         self._vertex = vertex
         self._path_cost = path_cost
         self._next = next
+        self._prev = None
         if next is not None:
             self._next.prev = self
 
     @property
-    def path_cost(self) -> float:
+    def path_cost(self) -> Optional[float]:
         return self._path_cost
 
     @property

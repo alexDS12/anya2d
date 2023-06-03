@@ -3,12 +3,8 @@ from __future__ import annotations
 from enum import Enum, auto
 from edge import Edge
 from grid_position import GridPosition
+from point import Point2D
 from typing import Optional, Set
-
-try:
-    from sympy import Point2D
-except ImportError as e:
-    raise Exception('Unable to import SymPy, make sure you have it installed')
 
 
 class Vertex:
@@ -38,25 +34,26 @@ class Vertex:
         self.id = id
         self.position = position
         self.grid_position = grid_position
+        self.hash = super().__hash__()
         self.incoming_edges = set()
         self.outgoing_edges = set()
-
-    @property
-    def touching_edges(self) -> Set[Edge]:
-        """Union between incoming and outgoing edges"""
-        return self.incoming_edges | self.outgoing_edges
+        self.touching_edges = set()
     
     def add_outgoing_edge(self, e: Edge) -> None:
         self.outgoing_edges.add(e)
+        self.touching_edges.add(e)
 
     def add_incoming_edge(self, e: Edge) -> None:
         self.incoming_edges.add(e)
+        self.touching_edges.add(e)
 
     def remove_incoming_edge(self, e: Edge) -> None:
         self.incoming_edges.discard(e)
+        self.touching_edges.discard(e)
 
     def remove_outgoing_edge(self, e: Edge) -> None:
         self.outgoing_edges.discard(e)
+        self.touching_edges.discard(e)
 
     def get_outgoing_neighbors(self) -> Set[Vertex]:
         """Get all neighbors' vertices of current vertex"""
@@ -84,11 +81,11 @@ class Vertex:
        return self.id == v.id
     
     def __hash__(self) -> int:
-        return hash((self.id, self.position, self.grid_position))
+        return self.hash
 
     def __repr__(self) -> str:
         """Debug representation of the vertex"""
-        return f'Vertex(id: {self.id}, grid position: {self.grid_position})'
+        return f'Vertex(id: {self.id}, pos: {self.position}, grid position: {self.grid_position})'
 
 
 class CellDirections(Enum):
