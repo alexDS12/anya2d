@@ -25,9 +25,8 @@ class Heuristic:
     """Anya heuristic differs from other heuristics due to the fact that
     Anya relies on intervals given those being composed of intermediate points.
 
-    Anya only successfully terminates if the algorithm finds an interval that contains the target (or end) node.
-    The target node must have an interval that only has its XY point, that means
-    interval left == right == target.root.x; and interval row == target.root.y
+    Anya only successfully terminates if the algorithm finds an interval that contains 
+    the target (or end) node.
 
     Both current and target nodes must be on opposite sides of the interval or 
     both on the same row as the interval. If that condition is not met,
@@ -60,6 +59,10 @@ class Heuristic:
         n: Node,
         t: Optional[Node] = None
     ) -> float:
+        """Calculate heuristic between `n` and `t`.
+        The target node must have an interval that only has its XY point, that means
+        interval left == right == target.root.x; and interval row == target.root.y
+        """
         if t is None:
             return 0
 

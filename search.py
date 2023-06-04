@@ -40,11 +40,10 @@ class Search:
         Cost between start and target node
     path_found : bool
         Flag indicating whether or not path was found
-    last_node_parent : SearchNode
 
     """
 
-    SEARCH_ID_COUNTER = 0
+    search_id_counter = 0
     VERBOSE = False
 
     class SearchNode(FibonacciHeapNode):
@@ -69,7 +68,7 @@ class Search:
         def reset(self) -> None:
             """Reset search node attrs"""
             self.parent = None
-            self.search_id = Search.SEARCH_ID_COUNTER
+            self.search_id = Search.search_id_counter
             self.closed = False
             super().reset()
 
@@ -78,7 +77,7 @@ class Search:
             return f'searchnode {hash(self.data)}; {self.data}'
 
     def __init__(self, expander: ExpansionPolicy):
-        self.roots_ = {}
+        self.roots_: Dict[int, self.SearchNode] = {}
         self.open = FibonacciHeap()
         self._heuristic = expander.heuristic
         self._expander = expander
@@ -87,7 +86,7 @@ class Search:
 
     def init(self) -> None:
         """Initialize open, closed and counters for a new search"""
-        self.SEARCH_ID_COUNTER += 1
+        self.search_id_counter += 1
         self.expanded = 0
         self.insertions = 0
         self.generated = 0
@@ -105,6 +104,9 @@ class Search:
         print(f'{hash(current.data)}; {current.data.root}; g={current.secondary_key}', file=stream)
 
     def search(self, start: Node, target: Node) -> Path:
+        """Perform search from `start` to `target` if there's a solution.
+        First compute path cost only and generate path going backwards on nodes
+        """
         cost = self.search_costonly(start, target)
         # generate the path
         path = Path()
@@ -118,7 +120,7 @@ class Search:
         return path
 
     def search_costonly(self, start: Node, target: Node) -> float:
-        """Perform path search from `start` to `target` if one exists.
+        """Perform cost only search from `start` to `target` if one exists.
         Initialize start search node and insert into the priority queue
         where later on lowest f-value nodes will be expanded.
         Iterate over all successors queued and update their g-value

@@ -59,6 +59,16 @@ class ExpansionPolicy:
     def grid(self) -> BitpackedGrid:
         """Get current searching grid"""
         return self._grid
+    
+    def validate_instance(self, start: Node, target: Node) -> bool:
+        """Validate start and target nodes when starting a new search instance"""
+        self._start = start
+        self._target = target
+        self._tx = self._target.root.x
+        self._ty = self._target.root.y
+
+        return (self._grid.get_cell_is_traversable(int(start.root.x), int(start.root.y)) and 
+                self._grid.get_cell_is_traversable(int(target.root.x), int(target.root.y)))
 
     def expand(self, vertex: Node) -> None:
         """Expand all neighbors of a node"""
@@ -92,16 +102,6 @@ class ExpansionPolicy:
         
         return self._euclidean.h(self._cnode.root.x, self._cnode.root.y, 
                                  self._csucc.root.x, self._csucc.root.y)
-
-    def validate_instance(self, start: Node, target: Node) -> bool:
-        """Validate start and target nodes when starting a new search instance"""
-        self._start = start
-        self._target = target
-        self._tx = self._target.root.x
-        self._ty = self._target.root.y
-
-        return (self._grid.get_cell_is_traversable(int(start.root.x), int(start.root.y)) and 
-                self._grid.get_cell_is_traversable(int(target.root.x), int(target.root.y)))
 
     def generate_successors(self, node: Node, retval: List[Node]) -> None:
         """Generate observable and non-observable flat and cone successors 

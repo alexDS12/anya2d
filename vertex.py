@@ -34,26 +34,25 @@ class Vertex:
         self.id = id
         self.position = position
         self.grid_position = grid_position
-        self.hash = super().__hash__()
         self.incoming_edges = set()
         self.outgoing_edges = set()
-        self.touching_edges = set()
+    
+    @property
+    def touching_edges(self) -> Set[Edge]:
+        """Get union of incoming and outgoing edges"""
+        return self.incoming_edges | self.outgoing_edges
     
     def add_outgoing_edge(self, e: Edge) -> None:
         self.outgoing_edges.add(e)
-        self.touching_edges.add(e)
 
     def add_incoming_edge(self, e: Edge) -> None:
         self.incoming_edges.add(e)
-        self.touching_edges.add(e)
 
     def remove_incoming_edge(self, e: Edge) -> None:
         self.incoming_edges.discard(e)
-        self.touching_edges.discard(e)
 
     def remove_outgoing_edge(self, e: Edge) -> None:
         self.outgoing_edges.discard(e)
-        self.touching_edges.discard(e)
 
     def get_outgoing_neighbors(self) -> Set[Vertex]:
         """Get all neighbors' vertices of current vertex"""
@@ -79,9 +78,6 @@ class Vertex:
     def __eq__(self, v: Vertex) -> bool:
        """Check if two vertices have same id"""
        return self.id == v.id
-    
-    def __hash__(self) -> int:
-        return self.hash
 
     def __repr__(self) -> str:
         """Debug representation of the vertex"""

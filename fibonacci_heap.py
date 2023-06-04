@@ -48,6 +48,30 @@ class FibonacciHeap:
     def __init__(self):
         """Constructs a FibonacciHeap object that contains no elements"""
         pass
+    
+    @property
+    def n_nodes(self) -> int:
+        """Returns the size of the heap which is measured in 
+        the number of elements contained in the heap.
+        Running time: O(1) actual
+        """
+        return self._n_nodes
+    
+    @n_nodes.setter
+    def n_nodes(self, n_nodes: int) -> None:
+        self._n_nodes = n_nodes
+
+    @property
+    def min_node(self) -> FibonacciHeapNode:
+        """Returns the smallest element in the heap. 
+        This smallest element is the one with the minimum key value.
+        Running time: O(1) actual
+        """
+        return self._min_node
+    
+    @min_node.setter
+    def min_node(self, min_node: FibonacciHeapNode) -> None:
+        self._min_node = min_node
 
     def is_empty(self) -> bool:
         """Tests if the Fibonacci heap is empty or not. Returns true if the heap is
@@ -145,18 +169,6 @@ class FibonacciHeap:
         node.secondary_key = secondary_key
         self.insert(node, key)
 
-    @property
-    def min_node(self) -> FibonacciHeapNode:
-        """Returns the smallest element in the heap. 
-        This smallest element is the one with the minimum key value.
-        Running time: O(1) actual
-        """
-        return self._min_node
-    
-    @min_node.setter
-    def min_node(self, min_node: FibonacciHeapNode) -> None:
-        self._min_node = min_node
-
     def remove_min(self) -> FibonacciHeapNode:
         """Removes the smallest element from the heap. 
         This will cause the trees in the heap to be consolidated,
@@ -200,20 +212,7 @@ class FibonacciHeap:
 
             # decrement size of heap
             self._n_nodes += 1
-
         return z
-
-    @property
-    def n_nodes(self) -> int:
-        """Returns the size of the heap which is measured in 
-        the number of elements contained in the heap.
-        Running time: O(1) actual
-        """
-        return self._n_nodes
-    
-    @n_nodes.setter
-    def n_nodes(self, n_nodes: int) -> None:
-        self._n_nodes = n_nodes
 
     @staticmethod
     def union(h1: FibonacciHeap, h2: FibonacciHeap) -> FibonacciHeap:

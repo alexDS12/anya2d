@@ -1,4 +1,32 @@
 class Experiment:
+    """An experiment is composed by 9 columns in a scenario file,
+    they are:
+    <bucket> <map_name> <map_width> <map_height> <start_x> <start_y> <end_x> <end_y> <optimal length>
+    Every scenario file should only contain problems for a single map
+
+    Attributes
+    ----------
+    _title : str
+        Experiment title
+    _map_file : str
+        Map name being used for this experiment
+    _x_size : int
+        Map width
+    _y_size : int
+        Map height
+    _start_x : int
+        Start X axis position
+    _start_y : int
+        Start Y axis position
+    _end_x : int
+        Target X axis position
+    _end_y : int
+        Target Y axis position
+    _upper_bound : float
+        Optimal length for the path in question
+
+    """
+
     def __init__(
         self,
         title: str,
