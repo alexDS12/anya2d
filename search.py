@@ -1,11 +1,41 @@
-import sys
 from expansion_policy import ExpansionPolicy
 from node import Node
 from fibonacci_heap import FibonacciHeap
 from fibonacci_heap_node import FibonacciHeapNode
 from path import Path
 from constants import EPSILON
-from typing import Dict, TextIO
+from typing import Dict
+
+
+class SearchNode(FibonacciHeapNode):
+    """This class holds various bits of data needed
+    to drive the search
+
+    Attributes
+    ----------
+    parent : SearchNode
+        Parent node of current node
+    search_id : int
+        Tracks if the node has been added to open_list
+    closed : bool
+        Tracks if the node has been expanded
+
+    """
+
+    def __init__(self, vertex: Node):
+        super().__init__(vertex)
+        self.search_id = -1
+
+    def reset_(self, search_id_counter: int) -> None:
+        """Reset search node attrs"""
+        self.parent = None
+        self.search_id = search_id_counter
+        self.closed = False
+        super().reset()
+
+    def __repr__(self) -> str:
+        """Debug representation of the search node"""
+        return f'({self.data.x}, {self.data.y})'
 
 
 class Search:
@@ -32,12 +62,12 @@ class Search:
         Counts operations in the heap structure
     open : FibonacciHeap
         Priority queue where unexpanded search nodes are stored ordered by their f value
-    mb_start_ : Node
+    mb_start : Node
         Start node
-    mb_target_ : Node
+    mb_target : Node
         Target node
-    mb_cost_ : float
-        Cost between start and target node
+    mb_cost : float
+        Cost between start and target nodes
     path_found : bool
         Flag indicating whether or not path was found
 
@@ -46,47 +76,17 @@ class Search:
     search_id_counter = 0
     VERBOSE = False
 
-    class SearchNode(FibonacciHeapNode):
-        """This class holds various bits of data needed
-        to drive the search
-
-        Attributes
-        ----------
-        parent : SearchNode
-            Parent node of current node
-        search_id : int
-            Tracks if the node has been added to open_list
-        closed : bool
-            Tracks if the node has been expanded
-
-        """
-
-        def __init__(self, vertex: Node):
-            super().__init__(vertex)
-            self.search_id = -1
-
-        def reset(self) -> None:
-            """Reset search node attrs"""
-            self.parent = None
-            self.search_id = Search.search_id_counter
-            self.closed = False
-            super().reset()
-
-        def __repr__(self) -> str:
-            """Debug representation of the search node"""
-            return f'searchnode {hash(self.data)}; {self.data}'
-
     def __init__(self, expander: ExpansionPolicy):
-        self.roots_: Dict[int, self.SearchNode] = {}
+        self.roots_: Dict[int, SearchNode] = {}
         self.open = FibonacciHeap()
         self._heuristic = expander.heuristic
         self._expander = expander
-        self.mb_start_ = None
-        self.mb_target_ = None
+        self.mb_start = None
+        self.mb_target = None
 
     def init(self) -> None:
         """Initialize open, closed and counters for a new search"""
-        self.search_id_counter += 1
+        Search.search_id_counter += 1
         self.expanded = 0
         self.insertions = 0
         self.generated = 0
@@ -95,13 +95,13 @@ class Search:
         self.roots_.clear()
         self.path_found = False
 
-    def print_path(self, current: SearchNode, stream: TextIO) -> None:
+    def print_path(self, current: SearchNode) -> None:
         """Get path starting from the first search node that is a parent
         to the last node before target
         """
         if current.parent is not None:
-            self.print_path(current.parent, stream)
-        print(f'{hash(current.data)}; {current.data.root}; g={current.secondary_key}', file=stream)
+            self.print_path(current.parent)
+        print(f'{current.data.root}; g={current.secondary_key}')
 
     def search(self, start: Node, target: Node) -> Path:
         """Perform search from `start` to `target` if there's a solution.
@@ -114,9 +114,9 @@ class Search:
             node = self.generate(target)
             while True:
                 path = Path(node.data, path, node.secondary_key)
-                node = node.parent
                 if node.parent is None:
                     break
+                node = node.parent
         return path
 
     def search_costonly(self, start: Node, target: Node) -> float:
@@ -132,12 +132,13 @@ class Search:
             return cost
 
         start_node = self.generate(start)
-        start_node.reset()
+        start_node.reset_(Search.search_id_counter)
 
         self.open.insert(start_node, self._heuristic.get_value(start, target), 0)
 
         while not self.open.is_empty():
-            current = self.open.remove_min()
+            current: SearchNode = self.open.remove_min()
+            
             if self.VERBOSE:
                 print(f'expanding (f={current.key}) {current}')
 
@@ -149,12 +150,9 @@ class Search:
                 # found the goal
                 cost = current.key
                 self.path_found = True
-                self.last_node_parent = current
 
                 if self.VERBOSE:
-                    self.print_path(current, sys.stderr)
-                    print(f'{target}; f={current.key}')
-
+                    self.print_path(current)
                 break
 
             # unique id for the root of the parent node
@@ -167,7 +165,7 @@ class Search:
 
                 insert = True
                 root_hash = self._expander.hash(succ)
-                root_rep = self.roots_.get(root_hash)
+                root_rep = self.roots_.get(root_hash, None)
                 new_g_value = current.secondary_key + self._expander.step_cost()
 
                 """Root level pruning:
@@ -192,7 +190,12 @@ class Search:
                         insert = (root_hash == p_hash) or (p_rep_hash == p_hash)
 
                 if insert:
-                    neighbour.reset()
+                    """Neighbor not found in the root history,
+                    which means it must be inserted. Reset its 
+                    search counter, add current node being expanded
+                    as its parent and add to open and to root history
+                    """
+                    neighbour.reset_(Search.search_id_counter)
                     neighbour.parent = current
                     self.open.insert(
                         neighbour,
@@ -219,10 +222,10 @@ class Search:
 
     def generate(self, v: Node) -> SearchNode:
         """Generate a new search node that acts as Fibonacci heap node under the hood"""
-        retval = self.SearchNode(v)
+        retval = SearchNode(v)
         self.generated += 1
         return retval
 
     def run(self) -> None:
         """Initiate a new search based on current start and target nodes"""
-        self.mb_cost_ = self.search_costonly(self.mb_start_, self.mb_target_)
+        self.mb_cost = self.search_costonly(self.mb_start, self.mb_target)

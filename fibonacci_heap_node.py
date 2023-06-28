@@ -54,7 +54,7 @@ class FibonacciHeapNode:
         self.mark = False
 
     @staticmethod
-    def less_than(
+    def less_than_(
         pk_a: float,
         sk_a: float,
         pk_b: float,
@@ -74,10 +74,10 @@ class FibonacciHeapNode:
                 return True
         return False
 
-    def __lt__(self, other: FibonacciHeapNode) -> bool:
+    def less_than(self, other: FibonacciHeapNode) -> bool:
         """Return True if this node has a lower priority than other"""
-        return FibonacciHeapNode.less_than(self.key, self.secondary_key,
+        return FibonacciHeapNode.less_than_(self.key, self.secondary_key,
                                            other.key, other.secondary_key)
-
+   
     def __repr__(self) -> str:
         return str(self.key)

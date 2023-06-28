@@ -90,8 +90,8 @@ class FibonacciHeap:
         The structure of the heap may be changed and will not be consolidated.
         Running time: O(1) amortized
         """
-        tmp_k = (k * FibonacciHeapNode.BIG_ONE + 0.5)
-        tmp_x = (x.key * FibonacciHeapNode.BIG_ONE + 0.5)
+        tmp_k = int(k * FibonacciHeapNode.BIG_ONE + 0.5)
+        tmp_x = int(x.key * FibonacciHeapNode.BIG_ONE + 0.5)
         if tmp_k > tmp_x:
             raise Exception('decrease_key() got larger key value')
 
@@ -99,11 +99,11 @@ class FibonacciHeap:
 
         y: FibonacciHeapNode = x.parent
 
-        if y is not None and x < y:
+        if y is not None and x.less_than(y):
             self.cut(x, y)
             self.cascading_cut(y)
 
-        if x < self._min_node:
+        if x.less_than(self._min_node):
             self._min_node = x
 
     @dispatch(FibonacciHeapNode, Number, Number)
@@ -148,7 +148,7 @@ class FibonacciHeap:
             self._min_node.right = node
             node.right.left = node
 
-            if node < self._min_node:
+            if node.less_than(self._min_node):
                 self._min_node = node
         else:
             self._min_node = node
@@ -211,7 +211,7 @@ class FibonacciHeap:
                 self.consolidate()
 
             # decrement size of heap
-            self._n_nodes += 1
+            self._n_nodes -= 1
         return z
 
     @staticmethod
@@ -233,7 +233,7 @@ class FibonacciHeap:
                     h.min_node.right = h2.min_node
                     h2.min_node.left = h.min_node
 
-                    if h2.min_node < h1.min_node:
+                    if h2.min_node.less_than(h1.min_node):
                         h.min_node = h2.min_node
             else:
                 h.min_node = h2.min_node
@@ -265,11 +265,7 @@ class FibonacciHeap:
     def consolidate(self) -> None:
         array_size = int(floor(log(self._n_nodes) * self.ONE_OVER_LOG_PHI)) + 1
 
-        array = []
-
-        # Initialize degree array
-        for i in range(array_size):
-            array.append(None)
+        array = [None] * array_size
 
         # Find the number of root nodes.
         num_roots = 0
@@ -278,8 +274,7 @@ class FibonacciHeap:
         if x is not None:
             num_roots += 1
             x = x.right
-
-            while x is not self._min_node:
+            while x != self._min_node:
                 num_roots += 1
                 x = x.right
 
@@ -298,7 +293,7 @@ class FibonacciHeap:
 
                 # There is, make one of the nodes a child of the other.
                 # Do this based on the key value.
-                if y < x:
+                if y.less_than(x):
                     x, y = y, x
 
                 # y disappears from root list.
@@ -338,7 +333,7 @@ class FibonacciHeap:
                 y.right.left = y
 
                 # Check if this is a new min.
-                if y < self._min_node:
+                if y.less_than(self._min_node):
                     self._min_node = y
             else:
                 self._min_node = y
@@ -384,7 +379,7 @@ class FibonacciHeap:
         # make y a child of x
         y.parent = x
 
-        if x.child == None:
+        if x.child is None:
             x.child = y
             y.right = y
             y.left = y
@@ -415,8 +410,7 @@ class FibonacciHeap:
         # do a simple breadth-first traversal on the tree
         while len(stack) > 0:
             curr: FibonacciHeapNode = stack.pop()
-            buf.write(curr)
-            buf.write(', ')
+            buf.write(f'{str(curr)}, ')
 
             if curr.child is not None:
                 stack.append(curr.child)
@@ -425,8 +419,7 @@ class FibonacciHeap:
             curr = curr.right
 
             while curr != start:
-                buf.write(curr)
-                buf.write(', ')
+                buf.write(f'{str(curr)}, ')
 
                 if curr.child is not None:
                     stack.append(curr.child)

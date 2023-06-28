@@ -7,7 +7,7 @@ from typing import Optional
 class Path:
     """Describes a path in a graph in terms of its constituent vertices
     and their associated cumulative cost. i.e. the cost to step from 
-    the start vertex to the current vertex, i
+    the start vertex to the current vertex
 
     Attributes
     ----------

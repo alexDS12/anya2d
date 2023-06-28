@@ -2,7 +2,7 @@ from __future__ import annotations
 
 # hacky implementation; we infer float and int as Number for method overload
 from numbers import Number
-from typing import Callable
+from typing import Callable, Iterable, Tuple
 
 try:
     from multipledispatch import dispatch
@@ -21,7 +21,7 @@ class Point2D:
     
     @x.setter
     def x(self, x: float) -> None:
-        self._x = float(x)
+        self._x = x
     
     @property
     def y(self) -> float:
@@ -30,12 +30,12 @@ class Point2D:
     
     @y.setter
     def y(self, y: float) -> None:
-        self._y = float(y)
+        self._y = y
     
     def set_location(self, x: float, y: float) -> None:
         """Combine X and Y setters within class"""
-        self._x = float(x)
-        self._y = float(y)
+        self._x = x
+        self._y = y
 
     @dispatch(object)
     def distance(self, p: Point2D) -> Callable[[float, float], float]:
@@ -52,7 +52,15 @@ class Point2D:
     def __eq__(self, p: Point2D) -> bool:
         """Check if two points have the same coordinates"""
         return self._x == p.x and self._y == p.y
+    
+    def __iter__(self) -> Iterable[Tuple[float]]:
+        """Hacky implementation so `(x, y)` coordinate can be unpacked"""
+        return iter((self._x, self._y))
+    
+    def __hash__(self) -> int:
+        """Hash attrs to compare against other points"""
+        return hash((self._x, self._y))
 
     def __repr__(self) -> str:
         """Debug representation of Point2D"""
-        return f'Point2D({self._x}, {self._y})'
+        return f'({self._x}, {self._y})'

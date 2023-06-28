@@ -87,14 +87,6 @@ class BitpackedGrid:
     def num_cells(self) -> int:
         """Get number of cells of the grid"""
         return self._map_height * self._map_width
-    
-    @property
-    def map_width_original(self) -> int:
-        return self._map_width_original
-    
-    @property
-    def map_height_original(self) -> int:
-        return self._map_height_original
 
     def get_point_is_visible(self, x: int, y: int) -> bool:
         """Return True/False indicating the point (x, y)
@@ -202,7 +194,7 @@ class BitpackedGrid:
 
     def get_map_id(self, x: int, y: int) -> int:
         """Get cell index on padded dimensions map"""
-        return (y + PADDING_) * self._map_width + (x + PADDING_)
+        return (y + PADDING_)* self._map_width + (x + PADDING_)
 
     def can_step_from_point(self, fromx: float, fromy: float, d: VertexDirections) -> bool:
         """Return True if it's possible to perform a movement from point `p` (x, y)
@@ -440,7 +432,20 @@ class BitpackedGrid:
             print('Map loaded')
         except Exception as e:
             raise Exception(f'Unexpected exception while loading map file: {e}')
-    
+        
+    def get_num_traversable_cells(self) -> int:
+        """Return the number of map cells that are not blocked.
+        Although this value does not represent all possible paths
+        since there may be problems without solution
+        e.g. cells surrounded by obstacles
+        """
+        valid = 0
+        for x in range(self._map_width_original):
+            for y in range(self._map_height_original):
+                if self.get_cell_is_traversable(x, y):
+                    valid += 1
+        return valid
+
     @staticmethod
     def get_number_trailing_zeros(value: int) -> int:
         """Return the number of zero bits following righmost one-bit

@@ -49,7 +49,7 @@ class Node:
         rooty: int, 
         parent: Optional[Node] = None
     ) -> Node:
-        """Create node based on raw points"""
+        """Create node based on pair of points"""
         return cls(interval, Point2D(rootx, rooty), parent)
 
     @property

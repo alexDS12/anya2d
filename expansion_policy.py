@@ -100,8 +100,7 @@ class ExpansionPolicy:
             ('Node under expansion and/or next successor node are/is None. '
              f'Got: {type(self._cnode)} and {type(self._csucc)}')
         
-        return self._euclidean.h(self._cnode.root.x, self._cnode.root.y, 
-                                 self._csucc.root.x, self._csucc.root.y)
+        return self._euclidean.h(*self._cnode.root, *self._csucc.root)
 
     def generate_successors(self, node: Node, retval: List[Node]) -> None:
         """Generate observable and non-observable flat and cone successors 
@@ -112,8 +111,7 @@ class ExpansionPolicy:
 
         if node.root.y == node.interval.row:
             projection.project(node, self._grid)
-            self.flat_node_obs(node, retval, projection)    	
-            
+            self.flat_node_obs(node, retval, projection)
             projection.project_f2c(node, self._grid)
             self.flat_node_nobs(node, retval, projection)
         else:
