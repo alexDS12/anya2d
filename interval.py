@@ -73,7 +73,9 @@ class Interval:
         return self._right - self._left
 
     def covers(self, i: Interval) -> bool:
-        """Check if intervals are identical or if this interval covers interval `i`"""
+        """Check if intervals are identical or 
+        if this interval covers interval `i`
+        """
         if self == i:
             return True
 
@@ -92,14 +94,18 @@ class Interval:
         if not isinstance(i, type(self)):
             return False
 
-        return abs(i.left - self._left) < DOUBLE_INEQUALITY_THRESHOLD and \
-               abs(i.right - self._right) < DOUBLE_INEQUALITY_THRESHOLD and \
-               i.row == self._row
+        return (abs(i.left - self._left) < DOUBLE_INEQUALITY_THRESHOLD and 
+                abs(i.right - self._right) < DOUBLE_INEQUALITY_THRESHOLD and 
+                i.row == self._row)
 
     def __hash__(self) -> int:
-        """Hash interval attrs so intervals can be compared"""
-        return hash((self._left, self._right, self._row))
+        temp = int(self._left)
+        result = temp ^ abs(temp >> 32)
+        temp = int(self._right)
+        result = 31 * result + (temp ^ abs(temp >> 32))
+        result = 31 * result + self._row
+        return result
 
     def __repr__(self) -> str:
         """Debug representation of the interval"""
-        return f'Interval({self._left}, {self._right}, {self._row})'
+        return f'Interval ({self._left}, {self._right}, {self._row})'

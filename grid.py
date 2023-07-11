@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from vertex import VertexDirections
 from constants import PADDING_, BITS_PER_WORD, LOG2_BITS_PER_WORD, INDEX_MASK
 from fileinput import input
 
@@ -87,6 +86,16 @@ class BitpackedGrid:
     def num_cells(self) -> int:
         """Get number of cells of the grid"""
         return self._map_height * self._map_width
+    
+    @property
+    def map_height_original(self) -> int:
+        """Get original map height"""
+        return self._map_height_original
+    
+    @property
+    def map_width_original(self) -> int:
+        """Get original map width"""
+        return self._map_width_original
 
     def get_point_is_visible(self, x: int, y: int) -> bool:
         """Return True/False indicating the point (x, y)
@@ -195,42 +204,6 @@ class BitpackedGrid:
     def get_map_id(self, x: int, y: int) -> int:
         """Get cell index on padded dimensions map"""
         return (y + PADDING_)* self._map_width + (x + PADDING_)
-
-    def can_step_from_point(self, fromx: float, fromy: float, d: VertexDirections) -> bool:
-        """Return True if it's possible to perform a movement from point `p` (x, y)
-        in a given direction `d`.
-        If `p` is discrete, it's necessary that at least one adjacent cell
-        is not blocked.
-        Otherwise, if `p` is not discrete, depends if cell (x, y) is blocked or not
-        """
-        discrete_x = ((fromx + self.smallest_step_div2) - int(fromx)) < self.smallest_step
-
-        ret_val = False
-        match d.name:
-            case 'VD_LEFT':
-                cx = int(fromx - 1 if discrete_x else fromx)
-                cy = int(fromy)
-                ret_val = (self.get_cell_is_traversable(cx, cy) or
-                           self.get_cell_is_traversable(cx, cy - 1))
-
-            case 'VD_RIGHT':
-                cx = int(fromx)
-                cy = int(fromy)
-                ret_val = (self.get_cell_is_traversable(cx, cy) or
-                           self.get_cell_is_traversable(cx, cy - 1))
-
-            case 'VD_UP':
-                cx = int(fromx)
-                cy = int(fromy - 1)
-                ret_val = (self.get_cell_is_traversable(cx, cy) or 
-                           (discrete_x and self.get_cell_is_traversable(cx - 1, cy)))
-
-            case 'VD_DOWN':
-                cx = int(fromx)
-                cy = int(fromy)
-                ret_val = (self.get_cell_is_traversable(cx, cy) or 
-                           (discrete_x and self.get_cell_is_traversable(cx - 1, cy)))
-        return ret_val
 
     def scan_cells_right(self, x: int, y: int) -> int:
         """Scan cells to the right starting at `p` (x, y)
