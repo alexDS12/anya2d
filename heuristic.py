@@ -1,17 +1,31 @@
 from math import nan
-from functools import cache
 from node import Node
 from vertex import Vertex
-from constants import EPSILON
+from constants import EPSILON, ROOT_TWO
+from point import Point2D
 from typing import Optional
+
+# hacky implementation; we infer float and int as Number for method overload
+from numbers import Number
+
+try:
+    from multipledispatch import dispatch
+except ImportError as e:
+    raise Exception('Unable to import multipledispatch, make sure you have it installed')
 
 
 class EuclideanDistanceHeuristic:
     """A heuristic for computing Euclidean distances in the plane."""
+
+    @dispatch(Vertex)
+    def get_value(self, n: Vertex) -> float:
+        return 0
+    
+    @dispatch(Vertex, Vertex)
     def get_value(
         self,
         n: Optional[Vertex],
-        t: Optional[Vertex] = None
+        t: Optional[Vertex]
     ) -> float:
         if n is None or t is None:
             return 0
@@ -19,6 +33,52 @@ class EuclideanDistanceHeuristic:
 
     def h(self, x1: float, y1: float, x2: float, y2: float) -> float:
         return ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
+
+
+class OctileDistanceHeuristic:
+    def __init__(self, t: Vertex):
+        self.target = t
+
+    @dispatch(Vertex)
+    def get_value(self, s: Vertex) -> float:
+        if self.target is None:
+            return 0
+        return self.get_value(s, self.target)
+
+    @dispatch(Vertex, Vertex)
+    def get_value(self, s: Vertex, t: Vertex) -> float:
+        if s is None:
+            return 0
+        return self.get_value(int(s.position.x), int(s.position.y),
+                              int(t.position.x), int(t.position.y))
+
+    @dispatch(Number, Number, Number, Number)
+    def get_value(
+        self,
+        x1: Number,
+        y1: Number,
+        x2: Number,
+        y2: Number
+    ) -> float:
+        dx = abs(x1 - x2)
+        dy = abs(y1 - y2)
+        return int(abs(dx - dy)) + min(dx, dy) * ROOT_TWO
+
+
+class HackyHeuristic:
+    def __init__(self):
+        self.h = OctileDistanceHeuristic(None)
+        self.target: Optional[Point2D] = None
+
+    @dispatch(Point2D)
+    def get_value(self, n: Point2D) -> float:
+        if self.target is None:
+            return 0
+        return self.h.get_value(*n, *self.target)
+
+    @dispatch(Point2D, Point2D)
+    def get_value(self, n: Point2D, t: Point2D) -> float:
+        return self.h.get_value(*n, *t)
 
 
 class Heuristic:
@@ -53,30 +113,31 @@ class Heuristic:
     def __init__(self):
         self._h = EuclideanDistanceHeuristic()
 
-    @cache
+    @dispatch(Node)
+    def get_value(self, n: Node) -> float:
+        return 0
+    
+    @dispatch(Node, Node)
     def get_value(
         self,
         n: Node,
-        t: Optional[Node] = None
+        t: Node
     ) -> float:
         """Calculate heuristic between `n` and `t`.
         The target node must have an interval that only has its XY point, that means
         interval left == right == target.root.x; and interval row == target.root.y
         """
-        if t is None:
-            return 0
-
         assert (t.root.y == t.interval.row and
                 t.root.x == t.interval.left and
                 t.root.x == t.interval.right)
 
-        irow = int(n.interval.row)
-        ileft = float(n.interval.left)
-        iright = float(n.interval.right)
-        targetx = float(t.root.x)
-        targety = float(t.root.y)
-        rootx = float(n.root.x)
-        rooty = float(n.root.y)
+        irow = n.interval.row
+        ileft = n.interval.left
+        iright = n.interval.right
+        targetx = t.root.x
+        targety = t.root.y
+        rootx = n.root.x
+        rooty = n.root.y
 
         if rooty < irow and targety < irow:
             targety += 2 * (irow - targety)
@@ -84,17 +145,17 @@ class Heuristic:
             targety -= 2 * (targety - irow)
 
         # project the interval endpoints onto the target row
-        rise_root_to_irow = abs(rooty - irow)
-        rise_irow_to_target = abs(irow - targety)
-        lrun = rootx - ileft
-        rrun = iright - rootx
-        left_proj = ileft - rise_irow_to_target * (lrun / rise_root_to_irow) if rise_root_to_irow != 0.0 else nan
-        right_proj = iright + rise_irow_to_target * (rrun / rise_root_to_irow) if rise_root_to_irow != 0.0 else nan
+        rise_root_to_irow = abs(n.root.y - n.interval.row)
+        rise_irow_to_target = abs(n.interval.row - t.root.y)
+        lrun = n.root.x - n.interval.left
+        rrun = n.interval.right - n.root.x
+        left_proj = n.interval.left - rise_irow_to_target * (lrun / rise_root_to_irow) if rise_root_to_irow != 0.0 else nan
+        right_proj = n.interval.right + rise_irow_to_target * (rrun / rise_root_to_irow) if rise_root_to_irow != 0.0 else nan
         
-        if (targetx + EPSILON) < left_proj:
+        if (t.root.x + EPSILON) < left_proj:
             return self._h.h(rootx, rooty, ileft, irow) + self._h.h(ileft, irow, targetx, targety)
 
-        if targetx > (right_proj + EPSILON):
+        if t.root.x > (right_proj + EPSILON):
             return self._h.h(rootx, rooty, iright, irow) + self._h.h(iright, irow, targetx, targety)
 
         return self._h.h(rootx, rooty, targetx, targety)

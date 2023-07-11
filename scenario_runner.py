@@ -5,9 +5,11 @@ from experiment_loader import ExperimentLoader
 from experiment import Experiment
 from search import Search
 from expansion_policy import ExpansionPolicy
+from bitpacked_grid_expansion_policy import BitpackedGridExpansionPolicy
 from micro_benchmark import MicroBenchmark
 from node import Node
 from interval import Interval
+from astar import AStar
 from typing import TextIO, List, Iterator, Tuple
 
 
@@ -46,11 +48,10 @@ class ScenarioRunner:
             
             for i, exp_line in enumerate(eval(f'self.run_{alg_name}(experiments, map_file)'), start=1):
                 res_stream.write(f'{exp_line}\n')
-                print(exp_line)
-                """ if i % 500 == 0:
-                    print(f'Computed {i}/{num_exps} experiments') """ 
+                if i % 500 == 0:
+                    print(f'Computed {i}/{num_exps} experiments') 
 
-            #print(res_stream.getvalue())
+            print(res_stream.getvalue())
             if self.save:
                 ScenarioRunner.save_result(res_stream, map_file, alg_name)
         except Exception as e:
@@ -89,6 +90,31 @@ class ScenarioRunner:
                    f'({exp.start_x},{exp.start_y});({exp.end_x},{exp.end_y});'
                    f'{exp.title};{exp.upper_bound};{cost};{exp.map_file}')
 
+    def run_astar(self, experiments: List[Experiment], map_file: str) -> Iterator[str]:
+        print(f'Running A-star for {self.scenario}')
+
+        try:
+            astar = AStar(BitpackedGridExpansionPolicy(f'{self.MAP_DIR}/{map_file}'))
+            if self.verbose:
+                astar.VERBOSE = True
+        except Exception as e:
+            raise Exception(format_exc())
+        
+        exp_runner = MicroBenchmark(astar)
+        
+        for exp in experiments:
+            astar.mb_start = astar.expander.get_grid_vertex(exp.start_x, exp.start_y)
+            astar.mb_target = astar.expander.get_grid_vertex(exp.end_x, exp.end_y)
+            
+            wallt_micro = exp_runner.benchmark(1)
+            cost = astar.mb_cost
+            duration = exp_runner.avg_time + 0.5
+
+            yield (f'{exp.title};{astar.path_found};AStar;{wallt_micro};{duration};'
+                   f'{astar.expanded};{astar.generated};{astar.heap_ops};'
+                   f'({exp.start_x},{exp.start_y});({exp.end_x},{exp.end_y});'
+                   f'{exp.upper_bound};{cost};{exp.map_file}')
+
     @staticmethod
     def save_result(stream: TextIO, map_file: str, alg: str) -> None:
         f_name = ScenarioRunner.get_output_f_name(map_file, alg)
@@ -105,13 +131,16 @@ class ScenarioRunner:
 
 def main():
     parser = ArgumentParser()
-    parser.add_argument('-scen', '--scenario', 
-                        help='Map scenario to run experiments', required=True)
+    parser.add_argument('-scen', '--scenario',
+                        required=True,
+                        help='Map scenario to run experiments')
     
-    parser.add_argument('-v', '--verbose', action='store_true', 
+    parser.add_argument('-v', '--verbose',
+                        action='store_true', 
                         help='Verbose output')
     
-    parser.add_argument('--save', action='store_true',
+    parser.add_argument('--save',
+                        action='store_true',
                         help='Save output to an external file')
 
     parser.add_argument('-alg', '--algorithm',
