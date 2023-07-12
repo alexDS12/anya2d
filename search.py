@@ -4,7 +4,8 @@ from fibonacci_heap import FibonacciHeap
 from fibonacci_heap_node import FibonacciHeapNode
 from path import Path
 from constants import EPSILON
-from typing import Dict
+from ai import _load_model, predict
+from typing import Dict, Optional
 
 
 class SearchNode(FibonacciHeapNode):
@@ -70,19 +71,31 @@ class Search:
         Cost between start and target nodes
     path_found : bool
         Flag indicating whether or not path was found
+    model : Optional[Sequential]
+        Trained DNN model to compute distance between nodes
+    id_map : Optional[str]
+        Map name to be used for DNN computations
 
     """
 
     search_id_counter = 0
     VERBOSE = False
 
-    def __init__(self, expander: ExpansionPolicy):
+    def __init__(
+        self,
+        expander: ExpansionPolicy,
+        model_path: Optional[str],
+        id_map: Optional[str]
+    ):
         self.roots_: Dict[int, SearchNode] = {}
         self.open = FibonacciHeap()
         self._heuristic = expander.heuristic
         self._expander = expander
         self.mb_start = None
         self.mb_target = None
+        if model_path is not None:
+            self.model = _load_model(model_path)
+            self.id_map = id_map
 
     def init(self) -> None:
         """Initialize open, closed and counters for a new search"""
@@ -134,7 +147,11 @@ class Search:
         start_node = self.generate(start)
         start_node.reset_(Search.search_id_counter)
 
-        self.open.insert(start_node, self._heuristic.get_value(start, target), 0)
+        if hasattr(self, 'model'):
+            value = predict(self.model, self.id_map, *start.root, *target.root)
+        else:
+            value = self._heuristic.get_value(start, target)
+        self.open.insert(start_node, value, 0)
 
         while not self.open.is_empty():
             current: SearchNode = self.open.remove_min()
@@ -197,10 +214,16 @@ class Search:
                     """
                     neighbour.reset_(Search.search_id_counter)
                     neighbour.parent = current
+                    
+                    if hasattr(self, 'model'):
+                        value = predict(self.model, self.id_map,
+                                        *neighbour.data.root, *target.root)
+                    else:
+                        value = self._heuristic.get_value(neighbour.data, target)
+
                     self.open.insert(
                         neighbour,
-                        new_g_value +
-                        self._heuristic.get_value(neighbour.data, target),
+                        new_g_value + value,
                         new_g_value
                     )
                     self.roots_[root_hash] = neighbour

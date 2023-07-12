@@ -4,24 +4,34 @@ from fibonacci_heap import FibonacciHeap
 from search import SearchNode
 from path import Path
 from constants import EPSILON
-from typing import Dict
+from ai import _load_model, predict
+from typing import Dict, Optional
 
 
 class AStar:
     """ An implementation of the A* search algorithm.
     Acts like the Anya search under the hood
+
     """
     
     search_id_counter = 0
     VERBOSE = False
         
-    def __init__(self, expander: BitpackedGridExpansionPolicy):
+    def __init__(
+        self,
+        expander: BitpackedGridExpansionPolicy, 
+        model_path: Optional[str], 
+        id_map: Optional[str]
+    ):
         self.roots_: Dict[int, SearchNode] = {}
         self.open = FibonacciHeap()
         self._heuristic = expander.heuristic
         self._expander = expander
         self.mb_start = None
         self.mb_target = None
+        if model_path is not None:
+            self.model = _load_model(model_path)
+            self.id_map = id_map
 
     @property
     def expander(self) -> BitpackedGridExpansionPolicy:
@@ -65,7 +75,11 @@ class AStar:
         start_node = self.generate(start)
         start_node.reset_(AStar.search_id_counter)
 
-        self.open.insert(start_node, self._heuristic.get_value(start, target), 0)
+        if hasattr(self, 'model'):
+            value = predict(self.model, self.id_map, *start, *target)
+        else:
+            value = self._heuristic.get_value(start, target)
+        self.open.insert(start_node, value, 0)
 
         while not self.open.is_empty():
             current: SearchNode = self.open.remove_min()
@@ -123,10 +137,16 @@ class AStar:
                 if insert:
                     neighbour.reset_(AStar.search_id_counter)
                     neighbour.parent = current
+
+                    if hasattr(self, 'model'):
+                        value = predict(self.model, self.id_map,
+                                        *neighbour.data, *target)
+                    else:
+                        value = self._heuristic.get_value(neighbour.data, target)
+
                     self.open.insert(
                         neighbour,
-                        new_g_value +
-                        self._heuristic.get_value(neighbour.data, target),
+                        new_g_value + value,
                         new_g_value
                     )
                     self.roots_[root_hash] = neighbour

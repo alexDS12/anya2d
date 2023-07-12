@@ -197,8 +197,24 @@ def apply_conversions(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def convert_s2f(value: str) -> float:
-  """Convert string to float character by character"""
-  return sum([ord(char) for char in value])
+    """Convert string to float character by character"""
+    return sum([ord(char) for char in value])
+
+
+def predict(
+    model: Sequential,
+    id_map: str,
+    start_x: int,
+    start_y: int,
+    target_x: int,
+    target_y: int
+) -> np.float64:
+    """Convert the input for DNN and use this `model` to make a prediction.
+    `y_pred` is an array of a single array with the prediction value. e.g. array([[49.88779]], dtype=float32)
+    """
+    X = np.array([convert_s2f(id_map), start_x, start_y, target_x, target_y]).astype(np.float64)
+    y_pred = model.predict(X.reshape(-1, len(X)), verbose=0)
+    return y_pred[0][0]
 
 
 def parser() -> Namespace:

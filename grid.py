@@ -197,13 +197,13 @@ class BitpackedGrid:
     ) -> bool:
         """Get cell value based on corresponding map word index"""
         map_id = self.get_map_id(x, y)
-        word_index = map_id >> LOG2_BITS_PER_WORD		
+        word_index = map_id >> LOG2_BITS_PER_WORD
         mask = 1 << ((map_id & INDEX_MASK))
         return (elts[word_index] & mask) != 0
 
     def get_map_id(self, x: int, y: int) -> int:
         """Get cell index on padded dimensions map"""
-        return (y + PADDING_)* self._map_width + (x + PADDING_)
+        return (y + PADDING_) * self._map_width + (x + PADDING_)
 
     def scan_cells_right(self, x: int, y: int) -> int:
         """Scan cells to the right starting at `p` (x, y)
