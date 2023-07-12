@@ -1,6 +1,6 @@
+import os
 from traceback import format_exc
 from argparse import ArgumentParser
-from io import StringIO
 from experiment_loader import ExperimentLoader
 from experiment import Experiment
 from search import Search
@@ -10,7 +10,7 @@ from micro_benchmark import MicroBenchmark
 from node import Node
 from interval import Interval
 from astar import AStar
-from typing import TextIO, List, Iterator, Tuple
+from typing import List, Iterator, Tuple, Optional
 
 
 class ScenarioRunner:
@@ -22,17 +22,14 @@ class ScenarioRunner:
     def __init__(
         self,
         scenario_file_path: str,
-        verbose: bool,
-        save_output: bool
+        verbose: bool
     ):
         self.scenario = scenario_file_path
         self.verbose = verbose
-        self.save = save_output
     
-    def run(self, alg_name: str) -> None:
+    def run(self, alg_name: str, model_path: Optional[str]) -> None:
         """Load experiments, run respective algorithm and
-        save experiment results in a stream and save output to
-        an external file if `save` is True
+        save experiment results in an external file
         """
         try:
             exp_loader = ExperimentLoader()
@@ -41,27 +38,29 @@ class ScenarioRunner:
                 print('No experiments to run; finishing.')
                 return
             
-            num_exps = len(experiments)
             map_file = experiments[0].map_file
-            res_stream = StringIO()
-            res_stream.write(f'{ScenarioRunner.EXP_HEADER}\n')
-            
-            for i, exp_line in enumerate(eval(f'self.run_{alg_name}(experiments, map_file)'), start=1):
-                res_stream.write(f'{exp_line}\n')
-                if i % 500 == 0:
-                    print(f'Computed {i}/{num_exps} experiments') 
-
-            print(res_stream.getvalue())
-            if self.save:
-                ScenarioRunner.save_result(res_stream, map_file, alg_name)
+            file_path = ScenarioRunner.get_file_path(alg_name, map_file, model_path)
+            with open(file_path, 'w') as run_file:
+                print(f'{ScenarioRunner.EXP_HEADER}', file=run_file)
+                
+                for exp_line in eval(f'self.run_{alg_name}(experiments, map_file, model_path)'):
+                    print(exp_line, file=run_file)
         except Exception as e:
             raise Exception(f'Issue while trying to run {alg_name}:\n{e}')
 
-    def run_anya(self, experiments: List[Experiment], map_file: str) -> Iterator[Tuple[str]]:
+    def run_anya(
+        self,
+        experiments: List[Experiment],
+        map_file: str,
+        model_path: Optional[str]
+    ) -> Iterator[Tuple[str]]:
         print(f'Running Anya for {self.scenario}')
         
         try:
-            anya = Search(ExpansionPolicy(f'{self.MAP_DIR}/{map_file}'))
+            anya = Search(ExpansionPolicy(f'{self.MAP_DIR}/{map_file}'),
+                          model_path=model_path,
+                          id_map=map_file.replace('.map', '') if model_path is not None else None)
+
             if self.verbose:
                 anya.VERBOSE = True
         except Exception as e:
@@ -88,13 +87,21 @@ class ScenarioRunner:
             yield (f'{exp.title};{anya.path_found};AnyaSearch;{wallt_micro};{duration};'
                    f'{anya.expanded};{anya.generated};{anya.heap_ops};'
                    f'({exp.start_x},{exp.start_y});({exp.end_x},{exp.end_y});'
-                   f'{exp.title};{exp.upper_bound};{cost};{exp.map_file}')
+                   f'{exp.upper_bound};{cost};{exp.map_file}')
 
-    def run_astar(self, experiments: List[Experiment], map_file: str) -> Iterator[str]:
+    def run_astar(
+        self,
+        experiments: List[Experiment],
+        map_file: str,
+        model_path: Optional[str]
+    ) -> Iterator[str]:
         print(f'Running A-star for {self.scenario}')
 
         try:
-            astar = AStar(BitpackedGridExpansionPolicy(f'{self.MAP_DIR}/{map_file}'))
+            astar = AStar(BitpackedGridExpansionPolicy(f'{self.MAP_DIR}/{map_file}'),
+                          model_path=model_path,
+                          id_map=map_file.replace('.map', '') if model_path is not None else None)
+
             if self.verbose:
                 astar.VERBOSE = True
         except Exception as e:
@@ -116,17 +123,32 @@ class ScenarioRunner:
                    f'{exp.upper_bound};{cost};{exp.map_file}')
 
     @staticmethod
-    def save_result(stream: TextIO, map_file: str, alg: str) -> None:
-        f_name = ScenarioRunner.get_output_f_name(map_file, alg)
-        print(f'Saving experiments to {f_name}')
-        
-        stream.seek(0)
-        with open(f_name, 'w') as f:
-            print(stream.getvalue(), file=f)
+    def get_file_path(alg: str, map_file: str, model_path: Optional[str]) -> str:
+        """Save results to a determined path within <RESULT_DIR>.
+        If computing paths without a model, the final path should be within root folder of <RESULT_DIR>.
+        On the other hand, if using a model, the real path should consider the first two levels
+        of `model_path`, that is <RESULT_DIR>/<MODEL_PATH>/<ALG>_<MAP_FILE>.txt
+        e.g.
+        Computing path using ANYA on London_0_512.map
+        model_path is <ai.MODEL_DIR>/anya_dnn/20230628_150610/final_model.h5
+        f_path should be <RESULT_DIR>/anya_dnn/20230628_150610/anya_London_0_512.txt
+        """
+        f_name = f"{alg}_{map_file.replace('.map', '.txt')}"
+
+        if model_path is not None:
+            path = ScenarioRunner.create_dirs_if_missing(model_path)
+            f_path = f'{path}\\{f_name}'
+        else:
+            f_path = f'{ScenarioRunner.RESULT_DIR}\\{f_name}'
+        return f_path
     
     @staticmethod
-    def get_output_f_name(map_file: str, alg: str) -> str:
-        return f"{ScenarioRunner.RESULT_DIR}/{alg}_{map_file.replace('.map', '.txt')}"
+    def create_dirs_if_missing(model_path: str) -> str:
+        path = os.path.abspath(model_path).split('\\')[-3:-1]
+        path = '{}\\{}\\{}'.format(ScenarioRunner.RESULT_DIR, *path)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        return path
 
 
 def main():
@@ -138,10 +160,6 @@ def main():
     parser.add_argument('-v', '--verbose',
                         action='store_true', 
                         help='Verbose output')
-    
-    parser.add_argument('--save',
-                        action='store_true',
-                        help='Save output to an external file')
 
     parser.add_argument('-alg', '--algorithm',
                         type=lambda arg: arg.lower(),
@@ -149,9 +167,12 @@ def main():
                         required=True,
                         help='Possible algorithms: anya, astar (case-insensitive)')
     
+    parser.add_argument('-m_path', '--model_path',
+                        help='Path for trained model for the algorithm to compute paths')
+    
     args = parser.parse_args()
-    runner = ScenarioRunner(args.scenario, args.verbose, args.save)
-    runner.run(args.algorithm)
+    runner = ScenarioRunner(args.scenario, args.verbose)
+    runner.run(args.algorithm, args.model_path)
 
 
 if __name__ == '__main__':
