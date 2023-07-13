@@ -28,13 +28,13 @@ class BitpackedGrid:
         Map size in words based on padded dimensions
     _map_width_in_words : int
         Map width in words for convenience
-    _map_cells : ndarray[int]
+    _map_cells : ndarray[uint]
         Flat array representing map grid cells
-    _visible : ndarray[int]
+    _visible : ndarray[uint]
         Array indicating which cell grids are visible and which are not
-    _corner : ndarray[int]
+    _corner : ndarray[uint]
         Array indicating which cell grids are corners and which are not
-    _double_corner : ndarray[int]
+    _double_corner : ndarray[uint]
         Array indicating which cell grids are double corners and which are not
     smallest_step : float
         Smallest distance between two adjacent points
@@ -59,11 +59,11 @@ class BitpackedGrid:
         """Initialize map attributes based on grid dimensions"""
         self._map_height_original = height
         self._map_width_original = width
-        self._map_width_in_words = ((width >> LOG2_BITS_PER_WORD) + 1)
+        self._map_width_in_words = (width >> LOG2_BITS_PER_WORD) + 1
         self._map_width = self._map_width_in_words << LOG2_BITS_PER_WORD
         self._map_height = height + 2 * PADDING_
 
-        self._map_size = ((self._map_height * self._map_width) >> LOG2_BITS_PER_WORD)
+        self._map_size = (self._map_height * self._map_width) >> LOG2_BITS_PER_WORD
         self._map_cells = zeros(self._map_size, dtype=uint)
         self._visible = zeros(self._map_size, dtype=uint)
         self._corner = zeros(self._map_size, dtype=uint)
@@ -185,7 +185,7 @@ class BitpackedGrid:
         """Set cell value based on corresponding map word index"""
         map_id = self.get_map_id(x, y)
         word_index = map_id >> LOG2_BITS_PER_WORD
-        mask = (1 << ((map_id & INDEX_MASK)))
+        mask = 1 << (map_id & INDEX_MASK)
         tmp = elts[word_index]
         elts[word_index] = (tmp | mask) if value else (tmp & ~mask)
 
@@ -198,7 +198,7 @@ class BitpackedGrid:
         """Get cell value based on corresponding map word index"""
         map_id = self.get_map_id(x, y)
         word_index = map_id >> LOG2_BITS_PER_WORD
-        mask = 1 << ((map_id & INDEX_MASK))
+        mask = 1 << (map_id & INDEX_MASK)
         return (elts[word_index] & mask) != 0
 
     def get_map_id(self, x: int, y: int) -> int:
@@ -231,7 +231,7 @@ class BitpackedGrid:
             t_index += 1
             obstacles = ~self._map_cells[t_index]
 
-        retval = ((t_index - start_index) * BITS_PER_WORD)
+        retval = (t_index - start_index) * BITS_PER_WORD
         retval += (stop_pos - start_bit_index)
         return x + retval
 
@@ -250,9 +250,9 @@ class BitpackedGrid:
         # ignore cells in bit positions > (i.e. to the right of) the starting cell
         # (NB: big endian order means the rightmost cell is in the highest bit)
         start_bit_index = tile_id & INDEX_MASK
-        opposite_index = (BITS_PER_WORD - (start_bit_index + 1))
-        mask = (1 << start_bit_index)
-        mask = (mask | (mask - 1))
+        opposite_index = BITS_PER_WORD - (start_bit_index + 1)
+        mask = 1 << start_bit_index
+        mask = mask | (mask - 1)
         obstacles &= mask
 
         stop_pos = 0
@@ -265,7 +265,7 @@ class BitpackedGrid:
             t_index -= 1
             obstacles = ~self._map_cells[t_index]
 
-        retval = ((start_index - t_index) * BITS_PER_WORD)
+        retval = (start_index - t_index) * BITS_PER_WORD
         retval += (stop_pos - opposite_index)
         return x - retval
     
@@ -289,13 +289,13 @@ class BitpackedGrid:
         # ignore corners in bit positions <= (i.e. to the left of) the starting cell
         # (NB: big endian order means the leftmost cell is in the lowest bit)
         start_bit_index = tile_id & INDEX_MASK
-        mask = (1 << start_bit_index)
-        corners &= ~(mask | (mask-1))
+        mask = 1 << start_bit_index
+        corners &= ~(mask | (mask - 1))
         # ignore obstacles in bit positions < (i.e. strictly left of) the starting cell    	
         # Because we scan cells (and not corners) we cannot ignore the current location. 
         # To do so might result in intervals that pass through obstacles 
         # (e.g. current location is a double corner)
-        obstacles &= ~(mask-1)
+        obstacles &= ~(mask - 1)
 
         stop_pos = 0
         start_index = t_index

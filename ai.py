@@ -210,11 +210,14 @@ def predict(
     target_y: int
 ) -> np.float64:
     """Convert the input for DNN and use this `model` to make a prediction.
-    `y_pred` is an array of a single array with the prediction value. e.g. array([[49.88779]], dtype=float32)
+    `y_pred` is a Tensor of a single array with the prediction value. e.g. array([[49.88779]], dtype=float32)
     """
-    X = np.array([convert_s2f(id_map), start_x, start_y, target_x, target_y]).astype(np.float64)
-    y_pred = model.predict(X.reshape(-1, len(X)), verbose=0)
-    return y_pred[0][0]
+    X_tensor = tf.convert_to_tensor(
+        [[convert_s2f(id_map), start_x, start_y, target_x, target_y]], 
+        dtype=tf.float64
+    )
+    y_pred = model(X_tensor)
+    return y_pred.numpy()[0][0]
 
 
 def parser() -> Namespace:
