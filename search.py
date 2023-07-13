@@ -84,8 +84,8 @@ class Search:
     def __init__(
         self,
         expander: ExpansionPolicy,
-        model_path: Optional[str],
-        id_map: Optional[str]
+        model_path: Optional[str] = None,
+        id_map: Optional[str] = None
     ):
         self.roots_: Dict[int, SearchNode] = {}
         self.open = FibonacciHeap()
